@@ -223,17 +223,22 @@ const offDo = fn => { KITS.on = false; try { return fn(); } finally { KITS.on = 
   ok(k6.design === 'plain' && X.colorDist(k6.fill, '#1b2747') >= 140 && k7.design === 'plain' && X.colorDist(k7.fill, '#f2efe6') >= 140,
     `navy and white Halves away v a plain navy side, and v a plain white one: changed to a plain kit clear of the home shirt, never the same halves turned round (${k6.fill} ${k6.design}; ${k7.fill} ${k7.design})`);
   // every Create Team colour pair, Halves or Quarters v Plain or a split shirt: never turned round, never a white or black kit trimmed in its own colour
-  const pal = X.KIT_COLOURS.map(c => c[1]), sweep = { n:0, turned:0, flat:0, near:0, missed:0 };
-  for (const hk of pal) for (const ht of pal) for (const hd of ['plain', 'halves']) for (const ak of pal) for (const at of pal) for (const ad of ['halves', 'quarters']) {
+  const pal = X.KIT_COLOURS.map(c => c[1]), sweep = { n:0, turned:0, flat:0, near:0, missed:0, same:0 };
+  for (const hk of pal) for (const ht of pal) for (const hd of ['plain', 'halves', 'quarters']) for (const ak of pal) for (const at of pal) for (const ad of ['halves', 'quarters']) {
     if (hk === ht || ak === at) continue;
     const H = mk(hk, ht, hd), A = { ...mk(ak, at, ad), id:'TSA' }, k = K.awayKit(H, A); sweep.n++;
     if (k.design === ad && k.fill === at && k.trim === ak) sweep.turned++;
     if (X.colorDist(k.fill, k.trim) < 60 && !(k.fill === ak && k.trim === at)) sweep.flat++;   // a side's own two colours are its own choice
     const shows = (f, t, d) => (['halves', 'quarters'].includes(d) ? [f, t] : [f]), gap = (f, t, d) => Math.min(...shows(hk, ht, hd).flatMap(x => shows(f, t, d).map(y => X.colorDist(x, y))));
     if (gap(k.fill, k.trim, k.design) < 140) { sweep.near++; if (gap(ak, at, ad) >= 140 || gap('#f2efe6', ak, 'plain') >= 140 || gap('#1c1c1c', ak, 'plain') >= 140) sweep.missed++; }
+    const hs = new Set(shows(hk, ht, hd)), as = new Set(shows(k.fill, k.trim, k.design));
+    if (hs.size === as.size && [...as].every(c => hs.has(c))) sweep.same++;   // the away side in exactly the home side's colours (1.8: a tie went to its own kit, white and black halves v the same)
   }
   ok(sweep.n > 60000 && sweep.turned === 0 && sweep.flat === 0, `${sweep.n} pairings of Create Team's colours with a split shirt away: none turned round, no white or black kit trimmed in its own colour (${json(sweep)})`);
   ok(sweep.missed === 0, `and readable wherever its own kit, white or black would be: no colour either side shows within 140 of the other's (${sweep.near} left close, each with every option clashing; ${sweep.missed} missed)`);
+  ok(sweep.same === 0, `and never in exactly the home side's colours, Halves and Quarters at home too: a tie goes past the away side's own kit (1.8.1; ${sweep.same} the same)`);
+  const wb = mk('#f2efe6', '#1c1c1c', 'halves'), kWB = K.awayKit(wb, { ...wb, id:'TSW' }), kBW = K.awayKit(wb, { ...mk('#1c1c1c', '#f2efe6', 'halves'), id:'TSW' }), kQB = K.awayKit(mk('#f2efe6', '#1c1c1c', 'quarters'), { ...mk('#1c1c1c', '#f2efe6', 'quarters'), id:'TSW' });
+  ok([kWB, kBW, kQB].every(k => k.fill === '#1c1c1c' && k.trim === '#f2efe6' && k.design === 'plain'), `white and black Halves v the same, v black and white Halves, and Quarters v Quarters reversed: every option shares a colour, and the tie goes to plain black, as e0821ce gave, never the same shirt or its mirror (${json([kWB, kBW, kQB].map(k => k.fill + '/' + k.trim + ' ' + k.design))})`);
   // HAC, the one Halves club, against every side in the game, home and away: readable wherever any option is
   let hacNear = 0; const hacOut = [];
   for (const o of sides) for (const [h, a] of [[hac, o], [o, hac]]) {

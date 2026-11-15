@@ -52,11 +52,17 @@ function awayKit(n0, n1) {
   const opts = [[n1.kit, n1.trim, d1, t1], [n1.alt, n1.altTrim, 'plain', null], KIT_SPLIT[d1] ? null : [n1.trim, n1.kit, d1, t1], ['#f2efe6', plainOn('#f2efe6', '#1c1c1c'), 'plain', null], ['#1c1c1c', plainOn('#1c1c1c', '#f2efe6'), 'plain', null]].filter(o => o && o[0] && o[1]);
   const home = kitShows(n0.kit, n0.trim, d0);
   const apart = o => (KIT_SPLIT[d0] || KIT_SPLIT[o[2]] ? kitNear(home, kitShows(o[0], o[1], o[2])) : colorDist(n0.kit, o[0]));
-  let best = opts[0], bd = -1;
+  /* A tie (every option sharing a colour with a split home shirt: white and black halves v white and black halves, or black and white)
+     never keeps the away side in the home side's own colours by default (1.8.1): first an option that does not show exactly the colours
+     the home side shows, then the shirt furthest from the home shirt, 1.7's measure, so white and black halves meet plain black as at
+     e0821ce. Only a tie is moved: every pairing with no split shirt ties only between options alike on both counts, so stays as 1.7. */
+  const hs = new Set(home), same = o => { const s = new Set(kitShows(o[0], o[1], o[2])); return s.size === hs.size && [...s].every(c => hs.has(c)); };
+  const rank = o => [apart(o), same(o) ? 0 : 1, colorDist(n0.kit, o[0])], ahead = (a, b) => a[0] > b[0] || (a[0] === b[0] && (a[1] > b[1] || (a[1] === b[1] && a[2] > b[2])));
+  let best = opts[0], br = null;
   for (const o of opts) {
-    const d = apart(o);
-    if (d >= 140) { best = o; break; }
-    if (d > bd) { bd = d; best = o; }
+    const r = rank(o);
+    if (r[0] >= 140) { best = o; break; }
+    if (!br || ahead(r, br)) { br = r; best = o; }
   }
   return { fill:best[0], trim:best[1], hoops:best[2] === 'hoops', design:best[2], third:best[3] };
 }

@@ -118,6 +118,7 @@ h2.title{margin:0;font:900 clamp(34px,8vw,52px)/.9 var(--display);text-transform
 .pk-top .cat{flex:0 1 300px}
 .pk-sides{flex:1 0 auto;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:stretch}
 .pk-sides.one{grid-template-columns:minmax(0,600px);justify-content:center}
+.pk-sides{overflow:clip;overflow-clip-margin:16px}   /* the card's chevrons reach into the screen's padding, never past it: as a card slides in (pickSlide, 28px) they would carry the page sideways for a moment (1.8.1); clipped 16px out, the screen's own padding, so every target is whole at rest */
 .pk-v{align-self:center;font:900 48px/1 var(--display);color:var(--chalk-dim)}
 .pk-side{min-width:0;display:flex;flex-direction:column;gap:8px;padding:10px;border:1.5px solid var(--rule);border-radius:10px;background:var(--panel)}
 .pk-side.on{border-color:var(--rule-hi)}
@@ -175,6 +176,33 @@ span.pk-group{flex:0 1 auto;min-width:0;font:800 16px/1.1 var(--body);text-align
 .pk-st{display:flex;flex-direction:column;gap:4px;min-width:0}
 .pk-st .lbl{font-size:12px;letter-spacing:0;text-transform:none;white-space:nowrap}
 .pk-n{align-self:center;min-width:56px;text-align:center;font:700 13px/1.1 var(--body);color:var(--chalk-dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* the arrows (pickIco, src/ui-menus.js; the owner, 14 Nov 2026): a chevron in the text's own colour, after the group's name (it opens a
+   list) and on Previous and Next, pointing the way each goes */
+.pk-ico{flex:none;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.pk-ico.l,.pk-ico.r{width:11px;height:16px}
+.pk-ico.d{width:9px;height:7px}
+.pk-step .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.pk-group{display:inline-flex;align-items:center;justify-content:center;gap:3px;padding-inline:8px 4px}   /* the chevron's room from the padding (8px left, 4px right, a 3px gap, 9px wide): the button as wide as 1.8's, so the card's line beside it keeps its hemisphere (Surrey 71px wide at 667, as before) */
+.pk-group .pk-gn{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.btn.pk-group.two .pk-gn{text-wrap:balance}
+.btn.pk-group.bare{padding-inline:12px}   /* no chevron: the button as 1.8 drew it (pickFit) */
+.btn.pk-group.bare .pk-ico{display:none}   /* pickFit: no chevron where it would cost the card's line its hemisphere, cut the name or push Your Team to two lines */
+/* a card's chevrons (pickChev; the owner, 14 Nov 2026): Previous and Next at its left and right edges, beside the shirt and name, each
+   drawn in a gutter of 18px (the card's padding and --chr) inside the card's edge. The target is 44px wide: the gutter and the rest past
+   the card's edge, into the side's padding and the space round the card, where nothing else is, so it never covers the shirt or the name
+   and costs them 12px. It runs the height of the shirt and name; the bars below keep the card's full width. Where the sides are unframed
+   (350 tall and under) the gutter widens, so the target stays on the screen and clear of the other side's (below). */
+.pk-row{position:relative;padding-inline:var(--chr,6px)}
+.pk-row>.team.pk-pick{width:100%}   /* the card's button the row's full width, as it was the card's (1.8.1: in the row it had shrunk to its content, and a locked Legend's padlock sat on its name) */
+.pk-chev{position:absolute;top:0;bottom:0;width:44px;min-height:44px;display:grid;align-items:center;color:var(--chalk-dim);cursor:pointer}
+.pk-chev.prev{left:calc(var(--chr,6px) - 44px);justify-items:end;padding-right:4px}
+.pk-chev.next{right:calc(var(--chr,6px) - 44px);justify-items:start;padding-left:4px}
+.pk-chev:hover,.pk-chev:active{color:var(--chalk)}
+.pk-chev.off{visibility:hidden}   /* a group of one: nowhere to go */
+.pk-card.made .pk-chev{top:auto;height:44px}   /* a team you made: both chevrons low in the row */
+.pk-card.made .btn.pk-edit{right:calc(12px + var(--chr,6px))}   /* and Edit just inside the right chevron's gutter, so no point is both Edit's and the chevron's (1.8.1: at 667 Edit covered the target's top) */
+.pk-card.made .tname,.pk-card.made .pk-rate,.pk-card.made .pk-league{margin-right:62px}   /* the name and its lines clear of Edit where it now sits */
+.pk-ico.cl,.pk-ico.cr{width:10px;height:24px;stroke-width:2.6}
 .pk-bar{height:8px;border-radius:4px;background:var(--rule-hi);overflow:hidden}
 .pk-bar i{display:block;height:100%;background:var(--chalk);transform-origin:left center;transform:scaleX(var(--v))}
 .pk-step{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px}
@@ -221,6 +249,8 @@ span.pk-group{flex:0 1 auto;min-width:0;font:800 16px/1.1 var(--body);text-align
   .team.pk-make{min-height:60px}
   .pk-side{padding:0;border:0;background:none;gap:4px}
   .pk-card{padding:6px 10px;gap:4px}
+  .pk-card.made .btn.pk-edit{right:calc(10px + var(--chr,6px))}
+  .pk-card{--chr:18px}   /* a 28px gutter: 16px to the screen's edge and to the V, the target 14.5px past the card's edge */
   #s-teams{--pkj:54px;--pkn:24px}
   .pk-pick .ovr{font-size:15px;min-width:26px;bottom:-6px}
   .pk-pick .jw.big{margin-bottom:6px}
@@ -233,7 +263,7 @@ span.pk-group{flex:0 1 auto;min-width:0;font:800 16px/1.1 var(--body);text-align
 /* 568 wide: the V and the gaps narrower, so each side keeps its five bars' names */
 @media (max-width:620px){
   .pk-who{letter-spacing:.08em}
-  .btn.pk-group{padding-inline:8px}
+  .pk-sides{overflow-clip-margin:12px}   /* the screen's padding here */
   .pk-n{min-width:48px;font-size:12px}
   #s-teams{padding-inline:max(12px,env(safe-area-inset-left,0px)) max(12px,env(safe-area-inset-right,0px))}
   .pk-sides{gap:6px}
@@ -241,10 +271,21 @@ span.pk-group{flex:0 1 auto;min-width:0;font:800 16px/1.1 var(--body);text-align
   .pk-stats{gap:4px}
   .pk-st .lbl{font-size:10.5px}
 }
+@media (max-width:620px) and (max-height:350px){
+  .pk-card{--chr:0px}   /* 568x320: a 44px target would need a 31px gutter (12px to the screen's edge, 13 to the V), which costs the name
+     38px and makes the screen scroll for some teams; Previous and Next, with their chevrons, are there */
+  .pk-chev{display:none}
+  .pk-card.made .btn.pk-edit{right:6px}   /* no chevrons: Edit back in the corner, as 1.8 */
+  .pk-card.made .tname,.pk-card.made .pk-rate,.pk-card.made .pk-league{margin-right:56px}
+}
 @media (max-width:760px){
   .pk-st .lbl{font-size:11px}
   .pk-fav span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .btn.pk-fav{padding-inline:12px}
+}
+@media (max-width:620px){
+  .btn.pk-group{padding-inline:6px 3px;gap:3px}   /* 568 wide: the chevron 5px wider than the name alone, where 1.8 had 8px each side */
+  .btn.pk-group.bare{padding-inline:8px}   /* and no chevron, 1.8's narrower padding */
 }
 /* where the screen scrolls after all (a computer's small window), a vertical drag on a card is the page's: only a swipe across is the card's */
 #s-teams.scrolls .pk-card{touch-action:pan-y}
@@ -256,6 +297,11 @@ span.pk-group{flex:0 1 auto;min-width:0;font:800 16px/1.1 var(--body);text-align
    above it. */
 .btn.pk-find{flex:none;width:44px;min-width:44px;min-height:44px;padding:0;display:grid;place-items:center}
 .pk-find svg,.fl-field svg{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
+.btn.pk-find:has(span){width:auto;display:inline-flex;align-items:center;gap:8px;padding:0 16px 0 12px}   /* the search icon with its word, Filter (the owner, 14 Nov 2026) */
+@media (max-width:620px){   /* 568 wide with Men | Women | Minis beside it: the icon alone, Filter still its name, so the title keeps its room */
+  .pk-top:has(#t-cat:not([hidden])) .btn.pk-find{width:44px;padding:0;justify-content:center}
+  .pk-top:has(#t-cat:not([hidden])) .pk-find span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+}
 #m-filter{padding:12px max(12px,var(--sar)) 12px max(12px,var(--sal))}
 #m-filter .card.fl{width:min(780px,100%);height:calc(100vh - 24px);height:calc(100dvh - 24px);padding:10px 12px;gap:8px;outline:none}
 .fl-top{flex:none;display:flex;align-items:center;gap:8px}
@@ -1386,7 +1432,7 @@ body.dev-pad #hp-settings button:focus-visible:not(.padfocus),#hp-settings:has(.
 .gap.mine{color:var(--flood)}
 .team.locked{position:relative}
 .team.locked::after{position:absolute;top:10px;right:10px;margin:0;width:13px;height:17px}
-.team.locked:not(.pk-make) .tname{margin-right:16px}   /* a locked Legends side: its name's box stops short of the lock (a margin, not padding, so fitNames sees a name that would run under it) */
+.team.locked:not(.pk-make) .tname{margin-right:26px}   /* a locked Legends side: its name's box stops short of the lock (a margin, not padding, so fitNames sees a name that would run under it); 26px, the lock's 10px inset and 13px width and 3px clear (1.8.1: 16px let a name fitted to its box run under it, as the card's chevrons made New Zealand 1987 fit at 667) */
 .lk-leg.locked{position:relative}
 .lk-leg.locked::after{position:absolute;top:6px;left:6px;margin:0;width:11px;height:14px;color:var(--chalk)}   /* top left: the jersey's overall badge sits on its right */
 /* the Trophy Cabinet, its own screen now; a World Cup's Pools, a plain button; no disclosure triangle on any summary */

@@ -5,7 +5,7 @@ let practice = null;
 /* The game's own version, small at the foot of Settings and on window.__tryline (the owner, 2026-11-11: "bump GAME_VERSION to 1.2", on
    top of main's 1.1 from PR #17, which showed it after the home's tagline; the tidied home has no tagline, so Settings is its one place).
    The app's store version (app/package.json, 1.0.0) is the app's, and apart from this. */
-const GAME_VERSION = '1.8';
+const GAME_VERSION = '1.8.1';
 
 /* =========================================================
    Data
@@ -1945,11 +1945,17 @@ function awayKit(n0, n1) {
   const opts = [[n1.kit, n1.trim, d1, t1], [n1.alt, n1.altTrim, 'plain', null], KIT_SPLIT[d1] ? null : [n1.trim, n1.kit, d1, t1], ['#f2efe6', plainOn('#f2efe6', '#1c1c1c'), 'plain', null], ['#1c1c1c', plainOn('#1c1c1c', '#f2efe6'), 'plain', null]].filter(o => o && o[0] && o[1]);
   const home = kitShows(n0.kit, n0.trim, d0);
   const apart = o => (KIT_SPLIT[d0] || KIT_SPLIT[o[2]] ? kitNear(home, kitShows(o[0], o[1], o[2])) : colorDist(n0.kit, o[0]));
-  let best = opts[0], bd = -1;
+  /* A tie (every option sharing a colour with a split home shirt: white and black halves v white and black halves, or black and white)
+     never keeps the away side in the home side's own colours by default (1.8.1): first an option that does not show exactly the colours
+     the home side shows, then the shirt furthest from the home shirt, 1.7's measure, so white and black halves meet plain black as at
+     e0821ce. Only a tie is moved: every pairing with no split shirt ties only between options alike on both counts, so stays as 1.7. */
+  const hs = new Set(home), same = o => { const s = new Set(kitShows(o[0], o[1], o[2])); return s.size === hs.size && [...s].every(c => hs.has(c)); };
+  const rank = o => [apart(o), same(o) ? 0 : 1, colorDist(n0.kit, o[0])], ahead = (a, b) => a[0] > b[0] || (a[0] === b[0] && (a[1] > b[1] || (a[1] === b[1] && a[2] > b[2])));
+  let best = opts[0], br = null;
   for (const o of opts) {
-    const d = apart(o);
-    if (d >= 140) { best = o; break; }
-    if (d > bd) { bd = d; best = o; }
+    const r = rank(o);
+    if (r[0] >= 140) { best = o; break; }
+    if (!br || ahead(r, br)) { br = r; best = o; }
   }
   return { fill:best[0], trim:best[1], hoops:best[2] === 'hoops', design:best[2], third:best[3] };
 }
@@ -12860,6 +12866,16 @@ function pickWho(s) {                                      // the side's own nam
   if (pickMode === 'career') return 'Your Club';
   return 'Your Team';
 }
+/* The arrows (the owner, 14 Nov 2026: "Team selection should be a little more obvious - arrows to show how to select/filter?"): one
+   chevron, drawn in the text's own colour (currentColor), so it takes no new colour; never read out. */
+const pickIco = (cls, d, box) => `<svg class="pk-ico ${cls}" viewBox="${box}" aria-hidden="true" focusable="false"><path d="${d}"/></svg>`;
+const PICK_ICO = { prev:pickIco('l', 'M8 2 3 8l5 6', '0 0 11 16'), next:pickIco('r', 'M3 2l5 6-5 6', '0 0 11 16'), down:pickIco('d', 'M2 3l5 5 5-5', '0 0 14 11'),
+  cprev:pickIco('cl', 'M8.5 2 2 12l6.5 10', '0 0 10 24'), cnext:pickIco('cr', 'M1.5 2 8 12l-6.5 10', '0 0 10 24') };
+/* A card's own chevrons, at its left and right edges: Previous and Next for a finger or a mouse (a tap, and a long press for a country),
+   never a stop for Tab or a controller's ring (a span, not a button) and never read out, Previous and Next under the card being the same
+   buttons for everyone. pickAt reads them as prev and next. */
+const PICK_CHEV = { cprev:'prev', cnext:'next' };
+const pickChev = (d, off) => `<span class="pk-chev ${d}${off ? ' off' : ''}" data-act="c${d}" aria-hidden="true">${PICK_ICO['c' + d]}</span>`;
 function pickWhere(g) {                                    // Northern Hemisphere · England, My Clubs (Northern Hemisphere · England · Local with LOCAL off); a competition's tier
   if (g.ctx) return g.ctx;
   if (g.home) return [PICK_HEMI[g.hemi], natName(g.home), ...(g.local && !LOCAL.on ? ['Local'] : [])].join(' · ');   // LOCAL: the group button names the county
@@ -12878,10 +12894,11 @@ function pickPanel(s) {
   const v = pickView[s], g = v.group, t = v.team, st = pick.sides[s], cat = pickCat();
   const where = pickWhere(g), many = v.ladder.length > 1 && !g.fixed;
   const two = g.county ? ' two' : '';                         // a county's name may take two lines (Notts Lincs & Derbyshire), never cut
-  const group = many ? `<button class="btn pk-group${two}" data-act="sheet" aria-haspopup="dialog">${esc(g.name)}</button>` : `<span class="pk-group fixed${two}">${esc(g.name)}</span>`;
+  const group = many ? `<button class="btn pk-group${two}" data-act="sheet" aria-haspopup="dialog"><span class="pk-gn">${esc(g.name)}</span>${PICK_ICO.down}</button>` : `<span class="pk-group fixed${two}">${esc(g.name)}</span>`;   // the down chevron: it opens a list (the owner, 14 Nov 2026)
   const real = !t.act, fav = real ? `<button class="btn pk-fav" data-act="fav" aria-pressed="${settings.fav.includes(keyOf(t))}" aria-label="Favourite"><i aria-hidden="true"></i><span>Favourite</span></button>` : '';
   const edit = real && t.custom ? `<button class="btn pk-edit" data-act="edit">Edit</button>` : '';   // a team you made: Edit, in the card's corner
   const count = `<span class="pk-n">${v.i + 1} of ${g.teams.length}</span>`;
+  const one = v.group.teams.length > 1 ? '' : ' disabled';
   let card;
   if (!real) card = `<button class="team pk-pick pk-make" data-act="pick" data-make="${t.act}"><span class="plus${t.act === 'import' ? ' link' : ''}" aria-hidden="true">${t.act === 'import' ? '' : '+'}</span><span class="tname">${esc(t.name)}</span></button>`;
   else {
@@ -12889,16 +12906,16 @@ function pickPanel(s) {
     card = `<button class="team pk-pick" data-act="pick"${t.legend ? ' data-legend="1"' : ''} aria-pressed="${st.set}">${jerseyRated(t, 'big')}<span class="tid"><span class="tname">${esc(listName(t))}</span><span class="pk-rate">${ratedStars(t)}${pickTag(s, t)}</span>${line ? `<span class="pk-league${line === g.name ? ' dup' : ''}">${esc(line)}</span>` : ''}${stars.length ? `<span class="tstars" aria-label="Star Traits: ${esc(stars.join(', '))}" data-names="${esc(stars.join('|'))}">${pickTraitsHtml(stars)}</span>` : ''}</span></button>`
       + `<span class="pk-stats">${ABILITIES.map(([k, l]) => { const a = abilityOf(t, k); return `<span class="pk-st"><span class="lbl">${l}</span><span class="pk-bar" role="img" aria-label="${l} ${Math.round(a)} of 5"><i style="--v:${(a/5).toFixed(2)}"></i></span></span>`; }).join('')}</span>${edit}`;
   }
-  const one = v.group.teams.length > 1 ? '' : ' disabled';
+  card = card.replace(/^(<button class="team pk-pick[^]*?<\/button>)/, m => `<div class="pk-row">${pickChev('prev', one)}${m}${pickChev('next', one)}</div>`);   // the chevrons either side of the shirt and name; the bars under them keep the card's full width
   const ctx = where ? `<span class="pk-ctx"><span>${where.split(' · ').map((w, i) => (!i && !g.ctx && w === PICK_HEMI[g.hemi] ? `<span class="pk-area">${pickHemiHtml(g.hemi)}</span>` : `<span>${esc(w)}</span>`)).join(' ')}</span></span>` : '';   // Northern Hemi · England · Local: it breaks between parts, never after a dot
   return `<div class="pk-head"><p class="pk-where"><span class="pk-who">${pickWho(s)}</span>${ctx}</p>${group}${fav}</div>`
     + `<div class="pk-card${st.set ? ' pk-set' : ''}${edit ? ' made' : ''}">${card}</div>`
-    + `<div class="pk-step"><button class="btn" data-act="prev"${one}>Previous</button>${count}<button class="btn" data-act="next"${one}>Next</button></div>`;   // Previous and Next in equal halves, the count between
+    + `<div class="pk-step"><button class="btn" data-act="prev"${one}>${PICK_ICO.prev}Previous</button>${count}<button class="btn" data-act="next"${one}>Next${PICK_ICO.next}</button></div>`;   // Previous and Next in equal halves, the count between
 }
 const pickTraitsHtml = names => names.map(n => `<b>${esc(n)}</b>`).join(' · ');
 /* The keyboard's focus and a controller's ring are on a side's control as it is drawn again: the same control after (Previous stays on
    Previous), so moving through teams never drops them. */
-const pickAt = el => { const side = el && typeof el.closest === 'function' && el.closest('.pk-side'); return side && el.dataset ? { s:+side.dataset.side, act:el.dataset.act } : null; };
+const pickAt = el => { const side = el && typeof el.closest === 'function' && el.closest('.pk-side'); return side && el.dataset ? { s:+side.dataset.side, act:PICK_CHEV[el.dataset.act] || el.dataset.act } : null; };
 function pickEl(s, act) { const p = $('t-side' + s); return (p && p.querySelector && p.querySelector(`[data-act="${act}"]`)) || null; }
 /* The team screen, for m: 'quick' (Quick Match: Your Team v the Opponent; nothing picked for you), 'two' (2 Players: Player 1 v Player 2),
    'champ' (a competition chosen on the home: comp is 'int' for the nation's championship, 'world', 'tour', or a league's list key; My Team
@@ -12936,7 +12953,7 @@ function renderTeams() {
   const t0 = pickView[0] && pickView[0].team;
   $('t-title').textContent = view ? view.title : pair ? 'Pick Teams' : pickMode === 'my' ? (t0 && !t0.act && isNation(t0) ? 'Pick Your Country' : 'Pick Your Club') : quick && pick.on === 1 ? 'Pick Opponent' : pickMode === 'career' || setup ? 'Pick Your Club' : 'Pick Your Team';
   $('t-cat').hidden = pickMode === 'career' || setup || !!pickCatFixed();   // Men | Women is New Player's; the setup's category comes from its answers; a profile that decides it, in Settings
-  $('t-find').hidden = !pickFilterable(pickView[pick.on]); $('t-find').setAttribute('aria-label', 'Search ' + pickFindWord());   // the Filter's icon, for the side being set: none on a fixed list (the World Cup, the tour)
+  $('t-find').hidden = !pickFilterable(pickView[pick.on]); $('t-find').setAttribute('aria-label', 'Filter ' + pickFindWord());   // the Filter's icon, for the side being set: none on a fixed list (the World Cup, the tour)
   $('t-sback').hidden = $('t-skip').hidden = !setup; $('t-back').hidden = setup;   // the setup's Back and Skip along the top, as on its other steps (src/profile.js)
   $('s-teams').classList.toggle('pk-setup', setup);
   for (const b of $('t-cat').querySelectorAll('[data-cat]')) b.setAttribute('aria-pressed', String(b.dataset.cat === settings.cat));
@@ -12975,7 +12992,8 @@ function fitNames() {
   for (const el of $('s-teams').querySelectorAll('.tname')) {
     el.style.fontSize = '';
     let px = parseFloat(getComputedStyle(el).fontSize) || 24;
-    while (el.scrollWidth > el.clientWidth + 0.5 && px > 13) { px = Math.max(13, px - 1); el.style.fontSize = px + 'px'; }   // never under 13px
+    const over = () => { if (el.scrollWidth > el.clientWidth + 0.5) return true; if (typeof document.createRange !== 'function' || !el.getBoundingClientRect) return false; const r = document.createRange(); r.selectNodeContents(el); return r.getBoundingClientRect().width > el.getBoundingClientRect().width + 0.01; };   // to the fraction of a pixel: scrollWidth rounds, and a name 0.2px over showed an ellipsis (1.8.1, a made team beside Edit at 667)
+    while (over() && px > 13) { px = Math.max(13, px - 1); el.style.fontSize = px + 'px'; }   // never under 13px
   }
 }
 /* A side's star traits, whole names only: two lines at most (one at data-fit 3), the last ones dropped where they would not fit, never one
@@ -13000,17 +13018,28 @@ function pickFit() {
   if (foot && foot.insertBefore && (back.nextElementSibling === go) !== short) foot.insertBefore(short ? back : go, short ? go : back);   // the order on screen is the order for Tab
   go.style.fontSize = '';
   for (let px = parseFloat(getComputedStyle(go).fontSize) || 22; go.scrollWidth > go.clientWidth + 0.5 && px > 14; ) { px -= 1; go.style.fontSize = px + 'px'; }   // Pick Wolverhampton on one line
+  const groups = [...scr.querySelectorAll('.btn.pk-group')];
+  for (const g of groups) g.classList.add('bare');            // first each group's button as 1.8 drew it, no chevron, so the card's line is measured as it was
+  const oneLine = box => { const parts = [...box.children], r = box.getBoundingClientRect(), top = parts[0].getBoundingClientRect().top; return !parts.some(p => { const q = p.getBoundingClientRect(); return Math.abs(q.top - top) > 2 || q.right > r.right + 0.5; }); };
   for (const a of scr.querySelectorAll('.pk-ctx .pk-area')) {   // the area leads a card's line only where the whole line fits on one line (PICK_HEMI); else it is left off (.off), its country saying where
     a.classList.remove('off');
-    const box = a.parentNode, parts = [...box.children]; if (!box.getClientRects().length) continue;
-    const r = box.getBoundingClientRect(), top = parts[0].getBoundingClientRect().top;
-    a.classList.toggle('off', parts.some(p => { const q = p.getBoundingClientRect(); return Math.abs(q.top - top) > 2 || q.right > r.right + 0.5; }));
+    const box = a.parentNode; if (!box.getClientRects().length) continue;
+    a.classList.toggle('off', !oneLine(box));
+  }
+  for (const g of groups) {                                   // then the chevron after a group's name only where the card's line keeps what it showed: the area where it fitted, one line, nothing cut; else it is left off (.bare), so the arrow never costs the line its hemisphere
+    const box = g.parentNode.querySelector('.pk-ctx > span'); g.classList.remove('bare');
+    if (box && box.children.length && box.getClientRects().length && !oneLine(box)) g.classList.add('bare');
   }
   const small = () => [...scr.querySelectorAll('.tname')].some(el => parseFloat(el.style.fontSize) < PICK_NAME_MIN), over = () => scr.scrollHeight > scr.clientHeight + 0.5;
   delete scr.dataset.dup;
   for (let n = 0; n <= 3; n++) { scr.dataset.fit = String(n); fitNames(); pickTraits(); if (!over() && !small()) break; }
   if (over()) { scr.dataset.dup = '1'; fitNames(); pickTraits(); }   // the last step: a league line that only says its group's name again (Made Teams under Made Teams) goes
   scr.classList.toggle('scrolls', scr.scrollHeight > scr.clientHeight + 1);   // styles.css: a card's own vertical swipe only where the page cannot scroll
+  for (const g of groups) {                                   // last, once the screen has its size and no scroll bar: the chevron kept only where the name keeps its room too: else it is left off (Championship at 568), the name never cut, Your Team on one line, the head 44px
+    if (g.classList.contains('bare')) continue;
+    const gn = g.querySelector('.pk-gn'), who = g.parentNode.querySelector('.pk-who'); if (!gn || !g.getClientRects().length) continue;
+    if (gn.scrollWidth > gn.clientWidth + 0.5 || g.getBoundingClientRect().height > 44.5 || (who && who.getBoundingClientRect().height > 1.5*parseFloat(getComputedStyle(who).lineHeight))) g.classList.add('bare');
+  }
 }
 /* The window resized (boot.js): the screen fitted again, but never under the open Filter, where a phone's keyboard is what resizes some
    browsers' windows; it is fitted once the Filter shuts (pickFilterShut). */
@@ -19303,7 +19332,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   knock:{ KNOCK, KNOCK_OFF, lv:knockLv, catchBall, knockOn, commitTackle, resolveContact, updateBallAir, resolvePass, pressure, tag, isHuman, ARCADE },   // src/knock.js: the knock-on levers and the paths they touch
   calls:{ CALLS, CALLS_OFF, lv:callsLv, possCall, callWon, callLate, canPlay, offsideMan, offMark, releaseOk, kickRing, callInk, bannerInk, contrastOf, CALL_PLATE, fireSay, fireShowing, fireFold, fireOpen, bannerLife, callsTick, callFlash, drawCalls, callPlace, callSpot, bannerBox, catchBall, pickUp, updateBallAir, updateLoose, resolvePass, resolveRuck, offload, looseInContact, doPass, kickBall, tag, heat, edgeLine, matchTargets, say, render, matchMild, scoreTry, restartKick, settleGoal, setRM:v => { RM = !!v; }, rm:() => RM },   // src/calls.js: the possession calls, the interception rules and the paths they touch
   maul:{ MAUL, mate:maulMate, open:maulOpen, can:maulCan, press:maulPress, cpuRate:maulCpuRate, call:maulCall, step:maulStep, form:maulForm, fresh:maulNew, drive:maulDrive, steer:maulSteer, over:maulOver, update:updateMaul, result:maulResult, cues:maulCues, hint:maulHint, geom:maulGeom, draw:drawMaul, forward:maulForward },   // src/maul.js and src/render-maul.js
-  picker:{ PICK, PICK_HEMI, PICK_HEMI_SHORT, ladder:pickLadder, ladderOf:pickLadderOf, countries:pickCountries, clubGroups:pickClubGroups, homeLine:pickHomeLine, find:pickFind, state:() => pick, view:s => pickView[s], build:pickBuild, step:pickStep, group:pickGroupStep, country:pickCountry, set:pickSet, go:pickGo, primary:pickPrimary, ready:pickReady, kickOff:pickKickOff, fav:pickFav, nav:pickNav, press:pickPress, back:pickBack, shoulder:pickShoulder, lift:pickLift, lifted:pickLifted, hint:pickHint, hintState:pickHintState, first:() => DEFAULT_FOCUS['s-teams'](), key:pickKeyDown,
+  picker:{ PICK, PICK_HEMI, PICK_HEMI_SHORT, ladder:pickLadder, ladderOf:pickLadderOf, countries:pickCountries, clubGroups:pickClubGroups, homeLine:pickHomeLine, find:pickFind, state:() => pick, view:s => pickView[s], build:pickBuild, step:pickStep, at:pickAt, group:pickGroupStep, country:pickCountry, set:pickSet, go:pickGo, primary:pickPrimary, ready:pickReady, kickOff:pickKickOff, fav:pickFav, nav:pickNav, press:pickPress, back:pickBack, shoulder:pickShoulder, lift:pickLift, lifted:pickLifted, hint:pickHint, hintState:pickHintState, first:() => DEFAULT_FOCUS['s-teams'](), key:pickKeyDown,
     filter:pickFilter, filterHow:pickFilterHow, lastPress:() => lastPress, touchFirst, fieldMayFocus, filterClose:pickFilterClose, filterShut:pickFilterShut, filterPick:pickFilterPick, filterTap:pickFilterTap, filterSel, filterType:pickFilterType, filterStep, filterNav:pickFilterNav, filterRoot, filterSearch, filterKb:pickFilterKb, filterable:pickFilterable, findWord:pickFindWord, filterState:() => FL, filterFirst:() => DEFAULT_FOCUS['m-filter'](), resize:pickResize, click:pickClick, one:pickOne, who:pickWho, where:pickWhere, panel:pickPanel, fit:pickFit, made:pickMade, league:pickLeague, HEMI:NATION_HEMI, LIST_HOME, URC_HOME, LIST_LOCAL, LEAGUE_SHORT, LIST_GROUP, PICK_RECENT, PICK_FAV, PICK_KEY, PICK_GROUP },   // the team screen (src/ui-menus.js)
   profile:{ AGES:PROFILE_AGES, GENDERS:PROFILE_GENDERS, BODIES:PROFILE_BODIES, NUM:PROFILE_NUM, STEPS:PROFILE_STEPS, get:() => profile, set:v => { profile = v; }, clean:cleanProfile, saved:profileSaved, lookClean:profileLookClean, cat:profileCat, level:profileLevel, apply:profileSet, natOf:profileNatOf, careerCat:profileCareerCat, careerLook:profileCareerLook, you:profileYou,
     first:() => profileFirst, setFirst:v => { profileFirst = !!v; }, auto:profileAuto, boot:profileBoot, open:profileSetupOpen, run:() => profileRun, step:profileStep, answer:profileAnswer, skip:profileSkip, back:profileBack, clubPick:profileClubPick, end:profileSetupEnd, setupCat:profileSetupCat,
