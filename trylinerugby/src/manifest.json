@@ -44,6 +44,7 @@
   "ui-help.js",
   "ui-menus.js",
   "ui-cups.js",
+  "import-core.js",
   "import.js",
   "kids.js",
   "ui-store.js",

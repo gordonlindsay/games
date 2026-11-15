@@ -42,7 +42,11 @@ Its two typefaces come with the game, on the web and in the app. It never loads 
 
 ## Add Your Team
 
-Add Your Team, the import of a club and its league, is part of Super Fan, in the app only. A grown-up check comes first. It then fetches the club or tournament page you paste and, if it needs them, up to two pages that page links to on the same site (its table and fixtures). That site receives those requests and your device's internet address, as any website you visit does; nothing about you or your child is sent with them. It keeps only the team and competition details it needs, such as team names and fixtures, on your device. It never keeps any person's name, photo or contact details.
+Add Your Team, the import of a club and its league, is part of Super Fan in the app. A grown-up check comes first. In the app it then fetches the club or tournament page you paste and, if it needs them, up to two pages that page links to on the same site (its table and fixtures). That site receives those requests and your device's internet address, as any website you visit does; nothing about you or your child is sent with them.
+
+On the web, the link you paste is sent instead to the game's own import service, which fetches the page (and up to two pages it links to on the same site) and sends back only club and team names, shirt colours and table numbers, never the page itself. The service is hosted by Vercel and, like any website, receives your device's internet address (Vercel's own request logs may record that address for a short time, but never the link); nothing about you or your child is sent with the link, and nothing is stored or logged by the game: not the link, not your address.
+
+It keeps only the team and competition details it needs, such as team names and fixtures, on your device. It never keeps any person's name, photo or contact details.
 
 ## The grown-up check
 
