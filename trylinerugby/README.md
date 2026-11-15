@@ -59,6 +59,18 @@ The owner, 15 Nov 2026: "My club should show the most recent first team result f
 - **Where it shows.** A Form +1.5, Form +1 or Form −1 chip on the side's team card (after My Team), with the point gained in yellow or lost in coral on its bars and the real change by the ability's name (+1.5 shows as +1 on one ability and +0.5 on the next, half a pip on its bar); and under each side's name in the Championship's next fixture. Where a card with star traits would not fit a short screen, the chip goes compact, then to the start of the league line, so the screen never scrolls (that second step approved by the owner on 15 Nov 2026: "Keep It"). A long opponent's name steps the result line down before its end goes. The cup hub and the career's next match play it but show no chip yet.
 - **What stays.** The card's overall, its stars and its star traits are the side as it is, so they never move week to week, and Stronger Side reads the sides as they are too: for one week a card can call a side Stronger while the match plays the other one up.
 - **Who.** A built-in club's own side (Premiership, Championship, National 1 and 2, Regional 1 and 2, Counties 1) and the nations, men's and women's each from their own Tests. Never a club's Women or Minis side, a Minis nation, a team you made, a My League side or a Legend.
+- **Balance (measured 15 Nov 2026, the boosted side's wins, a draw counted half).** The same matches with and without a file, seeded, two-minute halves: AI v AI on Normal (n=1200, six club pairings, ends swapped), the tools' bot as the player on Easy, Normal and Hard (n=400; the boosted side is the player's unless the column says otherwise), the casual profile on Easy (n=600) and the bot on Hard with nations (England v Scotland, Ireland v France, Italy v Wales, n=400). The first figures were at +2; the owner's +1.5 came after.
+
+  | Setup | No file | +2 v -1 (first build) | +1.5 v -1 | +1 v -1 | +1.5 v 0 | +1 v 0 | -1 v 0 | 0 v +1.5 | -1 v +1.5 |
+  | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+  | AI v AI, Normal | 47.9% | 68.4% | 63.1% | 57.2% | 60.3% | 55.5% | 45.5% | | |
+  | Bot, Easy (margin) | +40.9 | +54.9 | +52.0 | +47.9 | +52.2 | +47.0 | +39.3 | +32.1 | +30.9 |
+  | Bot, Normal | 98.3% | 99.5% | 99.5% | 98.8% | 99.5% | 99.5% | 96.1% | 84.6% | 83.9% |
+  | Bot, Hard | 52.5% | 87.4% | 81.4% | 76.0% | 80.3% | 74.8% | 49.4% | 27.4% | 22.9% |
+  | Casual, Easy | 95.4% | 99.8% | 99.8% | | 98.1% | 97.2% | 92.8% | 85.9% | |
+  | Nations, Hard | 45.4% | 81.8% | 74.3% | | 69.0% | 65.3% | 38.6% | | 20.8% |
+
+  So +1.5 sits between +1 and the first +2 everywhere: the Hard even match goes from 52.5% to 81.4% at +1.5 v -1 (87.4% at +2 v -1, 76.0% at +1 v -1), and its half point on the side's next ability is worth about 5 of those points (80.3% against 74.8% with no -1 opposite). -1 alone costs little (49.4% on Hard, 45.5% AI v AI), since its point comes off the weakest ability, as built. Scripts and results: the balance runs of 15 Nov (`run.mjs`, `worker.mjs`, `analyse.mjs`, outside the repository).
 - **Kids.** No boost at the Kids level and none for Minis, for anyone: Kids sets its own difficulty for the child. The result itself still shows on the home.
 - **The clock.** The window is checked against the device's clock (the UK date at that moment), so a device with its clock set back keeps an old boost. Acceptable for an offline game.
 - **Permission.** Pitchero's terms forbid copying its pages without written permission; the owner has switched this on accepting that risk, as with the ratings feed below.
