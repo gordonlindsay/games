@@ -177,9 +177,11 @@ function artDesignFrame(r, deg, mirror, body, design, third) {
   }
   return { map:maps[key] };
 }
-/* A Plain shirt's third (kitEdgeOf, src/kit-design.js): the trim's pixels at its open edge, next to his skin, at the collar and the cuffs.
-   A run of trim that touches the shirt and not the socks is the collar or a cuff (a sock top touches the sock); its pixels with skin
-   beside them take the third. Once an atlas row (ART.emaps): mirrored, the same pixels. */
+/* A Plain shirt's third (kitEdgeOf, src/kit-design.js): a band of the shirt alongside the trim at the collar and the cuffs, on the side
+   away from his skin. A run of trim that touches the shirt and not the socks is the collar or a cuff (a sock top touches the sock); the
+   shirt's pixels beside it, none with skin beside them, take the third, so the trim keeps its full width and the third adds its own band,
+   about a device pixel at match size (inside the trim, as first built, it blended into the trim and the skin). Once an atlas row
+   (ART.emaps): mirrored, the same pixels. */
 function artEdgeFrame(r) {
   let m = ART.emaps.get(r);
   if (!m) {
@@ -203,7 +205,11 @@ function artEdgeFrame(r) {
       ok.push(shirt && !socks);
     }
     m = new Uint8Array(w*h);
-    for (let k = 0; k < w*h; k++) if (run[k] >= 0 && ok[run[k]]) { const x = k % w; if (near(x, (k - x)/w, t => t === BARE)) m[k] = 1; }
+    for (let k = 0; k < w*h; k++) {
+      if (id[k] !== SHIRT && id[k] !== HOOP) continue;
+      const x = k % w, y = (k - x)/w;
+      if (!near(x, y, t => t === BARE)) for (let v = -1; v <= 1 && !m[k]; v++) for (let u = -1; u <= 1; u++) { const X = x + u, Y = y + v; if (X >= 0 && Y >= 0 && X < w && Y < h && run[Y*w + X] >= 0 && ok[run[Y*w + X]]) { m[k] = 1; break; } }
+    }
     ART.emaps.set(r, m);
   }
   return { map:m, edge:true };

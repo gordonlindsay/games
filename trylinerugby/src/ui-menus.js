@@ -636,10 +636,11 @@ const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', 
 const keyOf = t => t.key || t.id;
 /* A side's shirt icon. Its design and third colour (1.8, src/kit-design.js) as the background, the collar and shoulder flash to suit
    (kitAccent, kitFlash); Plain and two-colour Hoops as 1.7 drew them, and KITS off is 1.7's markup exactly. A Plain shirt with a third
-   (kitEdgeOf) is 1.7's shirt with the third inside the collar's trim and under the sleeves' (.jersey.edge, styles.css). */
+   (kitEdgeOf) is 1.7's shirt with the third inside the collar's trim and under the sleeves' (.jersey.edge, styles.css); a dark third
+   (luma under 0.2) goes outside the collar's trim instead (.out), or it melts into the neck hole beside it. */
 function jersey(t, cls) {
   const k = HEX.test(t.kit) ? t.kit : '#888888', tr = HEX.test(t.trim) ? t.trim : '#f2efe6', d = kitDesignOf(t), th = kitThirdOf(t), e = kitEdgeOf(t);
-  if (e) return `<span class="jw ${cls || ''}"><span class="jersey edge" style="--kit:${k};--trim:${tr};--third:${e}"></span></span>`;
+  if (e) return `<span class="jw ${cls || ''}"><span class="jersey edge${luma(e) < 0.2 ? ' out' : ''}" style="--kit:${k};--trim:${tr};--third:${e}"></span></span>`;
   if (!KITS.on || (d === 'plain' || d === 'hoops') && !th) return `<span class="jw ${cls || ''}"><span class="jersey${d === 'hoops' ? ' hoops' : ''}" style="--kit:${k};--trim:${tr}"></span></span>`;
   return `<span class="jw ${cls || ''}"><span class="jersey d-${d}" style="--kit:${k};--trim:${tr}${th ? ';--third:' + th : ''};--acc:${kitAccent(t)};--flash:${kitFlash(t)};background:${kitCss(t)}"></span></span>`;
 }

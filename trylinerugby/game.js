@@ -1101,11 +1101,13 @@ function kitThirdOf(t) {
   const c = t.third.toLowerCase();
   return c === String(t.kit).toLowerCase() || c === String(t.trim).toLowerCase() ? null : t.third;
 }
-/* A Plain shirt's third (the owner, 15 Nov 2026: "Show It as a Collar Trim"): a thin edge in the third at the collar and cuffs, at the
-   trim's open edge (the neck, the arm). Kept apart from kitThirdOf, which still answers null for Plain, so the clash rule, the saves and
-   every design's drawing are as they were; none with KITS off, on a design, or where it is the shirt's or the trim's own colour. A club's
-   side saved in a championship, cup or career keeps no third on Plain (kitClean), so, as cleanSide gives a 1.7 save its club's design, a
-   side that is a club in the club's own shirt and trim takes the club's edge. A made side never has one: Create Team gives Plain no third. */
+/* A Plain shirt's third (the owner, 15 Nov 2026: "Show It as a Collar Trim"): a thin edge in the third at the collar and cuffs, beside the
+   trim (the close-ups and the icon at its open edge, the neck and the arm, or outside it for a dark third on the icon; the sprites on the
+   shirt's side of it, where a band of its own reads at match size). Kept apart from kitThirdOf, which still answers null for Plain, so the
+   clash rule, the saves and every design's drawing are as they were; none with KITS off, on a design, or where it is the shirt's or the
+   trim's own colour. A club's side saved in a championship, cup or career keeps no third on Plain (kitClean), so, as cleanSide gives a 1.7
+   save its club's design, a side that is a club in the club's own shirt and trim takes the club's edge. A made side never has one: Create
+   Team gives Plain no third. */
 let KIT_EDGE_CLUBS = null;
 function kitEdgeOf(t) {
   if (!KITS.on || !t || kitDesignOf(t) !== 'plain') return null;
@@ -8826,9 +8828,11 @@ function artDesignFrame(r, deg, mirror, body, design, third) {
   }
   return { map:maps[key] };
 }
-/* A Plain shirt's third (kitEdgeOf, src/kit-design.js): the trim's pixels at its open edge, next to his skin, at the collar and the cuffs.
-   A run of trim that touches the shirt and not the socks is the collar or a cuff (a sock top touches the sock); its pixels with skin
-   beside them take the third. Once an atlas row (ART.emaps): mirrored, the same pixels. */
+/* A Plain shirt's third (kitEdgeOf, src/kit-design.js): a band of the shirt alongside the trim at the collar and the cuffs, on the side
+   away from his skin. A run of trim that touches the shirt and not the socks is the collar or a cuff (a sock top touches the sock); the
+   shirt's pixels beside it, none with skin beside them, take the third, so the trim keeps its full width and the third adds its own band,
+   about a device pixel at match size (inside the trim, as first built, it blended into the trim and the skin). Once an atlas row
+   (ART.emaps): mirrored, the same pixels. */
 function artEdgeFrame(r) {
   let m = ART.emaps.get(r);
   if (!m) {
@@ -8852,7 +8856,11 @@ function artEdgeFrame(r) {
       ok.push(shirt && !socks);
     }
     m = new Uint8Array(w*h);
-    for (let k = 0; k < w*h; k++) if (run[k] >= 0 && ok[run[k]]) { const x = k % w; if (near(x, (k - x)/w, t => t === BARE)) m[k] = 1; }
+    for (let k = 0; k < w*h; k++) {
+      if (id[k] !== SHIRT && id[k] !== HOOP) continue;
+      const x = k % w, y = (k - x)/w;
+      if (!near(x, y, t => t === BARE)) for (let v = -1; v <= 1 && !m[k]; v++) for (let u = -1; u <= 1; u++) { const X = x + u, Y = y + v; if (X >= 0 && Y >= 0 && X < w && Y < h && run[Y*w + X] >= 0 && ok[run[Y*w + X]]) { m[k] = 1; break; } }
+    }
     ART.emaps.set(r, m);
   }
   return { map:m, edge:true };
@@ -12564,10 +12572,11 @@ const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', 
 const keyOf = t => t.key || t.id;
 /* A side's shirt icon. Its design and third colour (1.8, src/kit-design.js) as the background, the collar and shoulder flash to suit
    (kitAccent, kitFlash); Plain and two-colour Hoops as 1.7 drew them, and KITS off is 1.7's markup exactly. A Plain shirt with a third
-   (kitEdgeOf) is 1.7's shirt with the third inside the collar's trim and under the sleeves' (.jersey.edge, styles.css). */
+   (kitEdgeOf) is 1.7's shirt with the third inside the collar's trim and under the sleeves' (.jersey.edge, styles.css); a dark third
+   (luma under 0.2) goes outside the collar's trim instead (.out), or it melts into the neck hole beside it. */
 function jersey(t, cls) {
   const k = HEX.test(t.kit) ? t.kit : '#888888', tr = HEX.test(t.trim) ? t.trim : '#f2efe6', d = kitDesignOf(t), th = kitThirdOf(t), e = kitEdgeOf(t);
-  if (e) return `<span class="jw ${cls || ''}"><span class="jersey edge" style="--kit:${k};--trim:${tr};--third:${e}"></span></span>`;
+  if (e) return `<span class="jw ${cls || ''}"><span class="jersey edge${luma(e) < 0.2 ? ' out' : ''}" style="--kit:${k};--trim:${tr};--third:${e}"></span></span>`;
   if (!KITS.on || (d === 'plain' || d === 'hoops') && !th) return `<span class="jw ${cls || ''}"><span class="jersey${d === 'hoops' ? ' hoops' : ''}" style="--kit:${k};--trim:${tr}"></span></span>`;
   return `<span class="jw ${cls || ''}"><span class="jersey d-${d}" style="--kit:${k};--trim:${tr}${th ? ';--third:' + th : ''};--acc:${kitAccent(t)};--flash:${kitFlash(t)};background:${kitCss(t)}"></span></span>`;
 }

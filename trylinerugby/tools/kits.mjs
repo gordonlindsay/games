@@ -1,9 +1,12 @@
 // Kit designs and a third colour (1.8; the owner, 14 Nov 2026: "Quad sections are ok and add a third colour too for completeness", then
 // Build on the mock-ups and Include for Create Team's Design row). src/kit-design.js, the wiring in src/data.js, the sprites' bake
 // (src/render-art.js), the close-ups (src/render-setpieces.js fig, src/render-goals.js figFB), the clash rule (src/match.js awayKit),
-// the saves (src/persistence.js) and Create Team's Design and Third Colour rows (src/ui-menus.js). Its browser part (each design's icon as
-// drawn, the sprite bake sampled pixel by pixel, the Top camera, the close-ups, Create Team's rows by touch, keyboard and pad at five
-// sizes) runs where Playwright is installed.
+// the saves (src/persistence.js) and Create Team's Design and Third Colour rows (src/ui-menus.js). The owner's two answers of 15 Nov 2026
+// too: a Plain shirt's third as an edge at the collar and cuffs (kitEdgeOf; the icon's .jersey.edge, the sprites' artEdgeFrame, the
+// close-ups' line and cuffs), and Halves and Quarters side on with the far half about a third of the shirt (ART_FAR in the sprites, the
+// outer sixth of the torso each side in fig). Its browser part (each design's icon as drawn, the sprite bake sampled pixel by pixel, the
+// Plain edge's pixels and the far half's share by hue, the Top camera, the close-ups, Create Team's rows by touch, keyboard and pad at
+// five sizes) runs where Playwright is installed.
 // node tools/kits.mjs   Exits 1 on any failure.
 process.env.SEED ??= '41';
 const { T, bot, reseed, rndCalls, LOCAL_CHILD } = await import('./harness.mjs');
@@ -137,10 +140,15 @@ const offDo = fn => { KITS.on = false; try { return fn(); } finally { KITS.on = 
   ok(one('plain', th) === '<span class="jw "><span class="jersey edge" style="--kit:#1b2747;--trim:#f2b01e;--third:#c8102e"></span></span>' && J(team('OCO')) === '<span class="jw "><span class="jersey edge" style="--kit:#1b2747;--trim:#f2b01e;--third:#7c1431"></span></span>'
     && offDo(() => one('plain', th)) === one('plain'),
     'Plain with a third: 1.7\'s shirt with the third at the collar and the sleeves (.jersey.edge), as Old Colfeians shows; KITS off 1.7\'s markup');
+  // a dark third (luma under 0.2) sits outside the collar's trim, against the shirt: inside, it melts into the neck hole beside it
+  ok(J(team('WOO')) === '<span class="jw "><span class="jersey edge out" style="--kit:#a99bd6;--trim:#f2efe6;--third:#1c1c1c"></span></span>' && one('plain', '#1c1c1c') === '<span class="jw "><span class="jersey edge out" style="--kit:#1b2747;--trim:#f2b01e;--third:#1c1c1c"></span></span>'
+    && json(['WIB', 'WNO', 'WOO', 'SHO', 'TOT', 'OCO', 'OWY', 'VIP', 'GRS', 'MAV', 'STA', 'OCV'].filter(id => J(team(id)).includes('edge out'))) === json(['WOO', 'VIP', 'GRS']) && offDo(() => J(team('WOO'))) === offDo(() => J({ ...team('WOO'), third:null })),
+    'Plain with a dark third: the third outside the collar\'s trim (.jersey.edge.out), Woodford, Vipers and Grasshoppers in black; KITS off 1.7\'s markup');
   {
     const css = fs.readFileSync(fileURLToPath(new URL('../styles.css', import.meta.url)), 'utf8');
-    ok(/\.jersey\.edge::before\{[^}]*var\(--third\)[^}]*var\(--trim\)\}/.test(css) && /\.jersey\.edge::after\{background:linear-gradient\(var\(--trim\) 0 55%,var\(--third\) 55%\)\}/.test(css),
-      'the edge\'s icon in styles.css: the collar\'s V in the trim with the third inside it, the sleeve band in the trim edged in the third');
+    ok(/\.jersey\.edge::before\{[^}]*var\(--third\)[^}]*var\(--trim\)\}/.test(css) && /\.jersey\.edge::after\{background:linear-gradient\(var\(--trim\) 0 55%,var\(--third\) 55%\)\}/.test(css)
+      && /\.jersey\.edge\.out::before\{background:[^}]*var\(--trim\)[^}]*var\(--trim\)[^}]*,var\(--third\)\}/.test(css) && !/\.jersey\.edge\.out::before\{[^}]*(left|right|height|top):/.test(css),
+      'the edge\'s icon in styles.css: the collar\'s V in the trim with the third inside it, the sleeve band in the trim edged in the third; a dark third\'s V the same shape, in the third with the trim inside it');
   }
   const want = {
     hoops:[th, /linear-gradient\(var\(--kit\) 0 26%,var\(--trim\) 26% 38%,var\(--kit\) 38% 50%,var\(--third\) 50% 62%/, 'var(--trim)', 'var(--trim)'],
@@ -204,10 +212,14 @@ const offDo = fn => { KITS.on = false; try { return fn(); } finally { KITS.on = 
   // the owner, 15 Nov 2026 ("Widen the Strip"): the far half the outer sixth of the torso at his back and at his chest, a third in all, so
   // both colours read at a glance (1.8's strips came to 0.23 of the painted area here)
   {
-    const share = (f, d) => { const l = log(() => K.fig(0, 0, 200, kit(d), { face:f })), a = rects(l, '#1b2747').reduce((v, r) => v + r[4]*r[5], 0), b = rects(l, '#f2b01e').reduce((v, r) => v + r[4]*r[5], 0); return f > 0 ? b/(a + b) : a/(a + b); };
+    // each painted cell is far when its colour is not the one his near half gives at its height (the cell's middle, as kitPaintBox
+    // takes it: z 0.95 - y/sc*0.78), so a quarter's near colour, which flips at the chest, is measured as Halves' is
+    const share = (f, d) => { const l = log(() => K.fig(0, 0, 200, kit(d), { face:f })), near = f > 0 ? -0.2 : 0.2; let n = 0, fa = 0;
+      for (const r of [...rects(l, '#1b2747'), ...rects(l, '#f2b01e')]) { const a = r[4]*r[5], z = 0.95 - (r[3] + r[5]/2)/200*0.78; if ((r[1] === '#f2b01e' ? 1 : 0) === K.paint(d, z, near, 0, null)) n += a; else fa += a; }
+      return fa/(n + fa); };
     const got = [share(1, 'halves'), share(-1, 'halves'), share(1, 'quarters'), share(-1, 'quarters')];
-    const qn = (f => { const l = log(() => K.fig(0, 0, 200, kit('quarters'), { face:f })); return rects(l, '#1b2747').length > 0 && rects(l, '#f2b01e').length > 0; })(1);
-    ok(got.slice(0, 2).every(v => v > 0.33 && v < 0.42) && qn, `fig side on, a big man: Halves' far half a third of the painted torso or a little more, facing either way (${got.map(v => v.toFixed(3)).join(' ')})`);
+    const qn = [1, -1].every(f => { const l = log(() => K.fig(0, 0, 200, kit('quarters'), { face:f })); return rects(l, '#1b2747').length > 0 && rects(l, '#f2b01e').length > 0; });
+    ok(got.every(v => v > 0.33 && v < 0.42) && qn, `fig side on, a big man: Halves' and Quarters' far half a third of the painted torso or a little more, facing either way (Halves ${got.slice(0, 2).map(v => v.toFixed(3)).join(' ')}, Quarters ${got.slice(2).map(v => v.toFixed(3)).join(' ')})`);
   }
   // the cells follow the man's size on screen: a scrum's man keeps 16 rows, a goal kicker close up gets one about every 3 device pixels (to 48)
   const rowsAt = (scale, h) => { const ys = new Set(); const g = { getTransform:() => ({ a:scale, b:0 }), set fillStyle(v) { /* colour */ }, fillRect:(x, y) => ys.add(y.toFixed(4)) };
@@ -407,7 +419,8 @@ const offDo = fn => { KITS.on = false; try { return fn(); } finally { KITS.on = 
 
 // 9. In Chromium. The sprites: each design baked onto the real atlas pictures, sampled pixel by pixel (green shirt, blue trim, purple third:
 //    no skin, hair or shorts reads as any of them), at the back (0), front (180) and both sides (90, and 270 mirrored); Plain and two-colour
-//    Hoops bake byte for byte as a 1.7-shaped kit does. Then Create Team's Design and Third Colour rows by touch, keyboard and pad at 844x390,
+//    Hoops bake byte for byte as a 1.7-shaped kit does; a Plain shirt's edge (kitEdgeOf, artEdgeFrame) a band of the third alongside the
+//    collar and cuffs; Halves and Quarters side on with the far half's share by hue about a third, standing and in every moving frame. Then Create Team's Design and Third Colour rows by touch, keyboard and pad at 844x390,
 //    667x375, 844x340, 667x320 and 568x320: the seven shirts in one strip (41px wide at 667x375, as approved; 44 tall), the chosen name,
 //    Third Colour hidden on Plain, None first, the shirt's and trim's colours left out, a third cleared when the shirt or trim takes it, the
 //    save and its reopening, and no sideways scroll
@@ -453,8 +466,8 @@ async function browserChecks() {
         const r = await page.evaluate(() => {
           const T = window.__tryline, K = T.kits, A = K.ART(), look = T.behind.cleanLook({ h:1.8, b:1, skin:2, hair:1, style:0, g:0 });
           const C = { shirt:'#109a52', trim:'#2050b0', third:'#7a2fb0' };
-          const bake = (kit, d8, frame = 0, grey = false, info = null) => {   // grey: the trim's and socks' parts in the shorts' white, so only the shirt's own pixels show a hue
-            const pose = K.sprite('idle', frame, d8, false, look), row = pose.row, mirror = pose.mirror, deg = A.man.clips.idle.dirs[pose.dir], q = 1/A.man.px;
+          const bake = (kit, d8, frame = 0, grey = false, info = null, clip = 'idle') => {   // grey: the trim's and socks' parts in the shorts' white, so only the shirt's own pixels show a hue
+            const pose = K.sprite(clip, frame, d8, false, look), row = pose.row, mirror = pose.mirror, deg = A.man.clips[clip].dirs[pose.dir], q = 1/A.man.px;
             const cv = document.createElement('canvas'); cv.width = 256; cv.height = 256; const g = cv.getContext('2d', { willReadFrequently:true });
             K.scratch(); const luts = K.palette({ shorts:'#ece9df', ...kit }, look);
             if (grey) { const P = A.man.parts, w = luts[P.indexOf('shorts') + 1]; luts[P.indexOf('trim') + 1] = w; luts[P.indexOf('socks') + 1] = w; }
@@ -486,20 +499,25 @@ async function browserChecks() {
           out.stripes = [flips, stB.t];
           const same = (a, b) => { const x = bake(a, 0), y = bake(b, 0); for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return false; return true; };
           // a Plain shirt's third (the owner, 15 Nov 2026: "Show It as a Collar Trim"): at each facing, its third only on pixels Plain
-          // without one has in the trim (the collar and cuffs), some trim left beside it, the shirt's pixels as they were, and the sock
-          // tops (the trim under the shirt's hem) still in the trim; from behind and in front, at the collar and at both cuffs
+          // without one has in the shirt, each beside a pixel of its trim (a band alongside the collar and cuffs, on the side away from his
+          // skin), the trim's every pixel still in the trim, the rest of the shirt as it was, and the sock tops (the trim under the shirt's
+          // hem) still in the trim; from behind and in front, at the collar and at both cuffs
           const key = ([x, y]) => x + ',' + y;
           out.edge = [0, 4, 2, 6].map(d8 => {
-            const a = cls(bake(kit('plain', false), d8)), b = cls(bake({ ...kit('plain', false), edge:C.third }, d8)), trimA = new Set(a[1].map(key));
+            const a = cls(bake(kit('plain', false), d8)), b = cls(bake({ ...kit('plain', false), edge:C.third }, d8)), trimA = new Set(a[1].map(key)), shirtA = new Set(a[0].map(key));
             const top = Math.min(...a[0].map(p => p[1])), low = Math.max(...a[0].map(p => p[1])), hem = Math.max(...a[0].filter(p => p[1] < (top + low)/2).map(p => p[1])), cx = mean(a[0], 0), socks = p => p[1] > hem;   // the socks are in the shirt colour: the hem is the shirt's lowest pixel in the top half
-            const th = b[2], inTrim = th.every(p => trimA.has(key(p))), left = b[1].length, socksKept = a[1].filter(socks).length === b[1].filter(socks).length && a[1].filter(socks).length > 0;
+            const within = (set, [x, y], k) => { for (let v = -k; v <= k; v++) for (let u = -k; u <= k; u++) if (set.has((x + u) + ',' + (y + v))) return true; return false; };   // k pixels: the bake's drawing samples a fraction of a pixel off, so an edge blends a pixel either side, and the trim's own antialiased rim (up a sleeve's outer edge, in front) reads as no hue
+            const th = b[2], trimB = new Set(b[1].map(key)), shirtB = new Set(b[0].map(key));
+            const onShirt = th.every(p => !trimA.has(key(p)) && within(shirtA, p, 1)), alongside = th.every(p => within(trimA, p, 3)), trimKept = a[1].every(p => trimB.has(key(p))), thB = new Set(th.map(key)), rest = a[0].filter(p => !shirtB.has(key(p)) && !within(thB, p, 1) && !within(trimA, p, 3)).length;   // a shirt pixel changed away from the band and the trim
+            const socksKept = a[1].filter(socks).length === b[1].filter(socks).length && a[1].filter(socks).length > 0;
             const collar = th.filter(p => p[1] < top + 6 && Math.abs(p[0] - cx) < 10).length, cuffL = th.filter(p => p[1] > top + 6 && p[0] < cx - 8).length, cuffR = th.filter(p => p[1] > top + 6 && p[0] > cx + 8).length;
-            return { d8, n:th.length, inTrim, left, socksKept, shirt:Math.abs(a[0].length - b[0].length) <= 0.02*a[0].length, ds:b[0].length - a[0].length, collar, cuffL, cuffR };   // the shirt's pixels as they were, bar a few at its edge the drawing's sampling blends with the third beside them
+            return { d8, n:th.length, onShirt, alongside, trimKept, trim:b[1].length, rest, socksKept, collar, cuffL, cuffR };
           });
           // Halves and Quarters side on (the owner, 15 Nov 2026: "Widen the Strip"): the far half's share of the shirt by hue, each shirt pixel
-          // against the colour his near half gives at its height, standing (both idle frames), facing right (90) and left (270, mirrored)
-          const farOf = (design, d8, frame) => {
-            const info = {}, px = bake(kit(design, false), d8, frame, true, info), { row, mirror, deg } = info, G = K.geom(row, deg, mirror, K.body(look)), pg = A.pages[row[0]], d = pg.data, pw = pg.w*4;
+          // against the colour his near half gives at its height, standing (both idle frames), facing right (90) and left (270, mirrored);
+          // and moving, every frame of the run, the sprint and the carry, each way
+          const farOf = (design, d8, frame, clip = 'idle') => {
+            const info = {}, px = bake(kit(design, false), d8, frame, true, info, clip), { row, mirror, deg } = info, G = K.geom(row, deg, mirror, K.body(look)), pg = A.pages[row[0]], d = pg.data, pw = pg.w*4;
             let near = 0, far = 0;
             for (let y = 0; y < row[4]; y++) for (let x = 0, i = (row[2] + y)*pw + row[1]*4; x < row[3]; x++, i += 4) {
               if (!d[i + 2] || (d[i + 1] >> 4) > 2) continue;
@@ -513,6 +531,7 @@ async function browserChecks() {
             return far/Math.max(1, near + far);
           };
           out.far = ['halves', 'quarters'].flatMap(design => [2, 6].flatMap(d8 => [0, 1].map(fr => farOf(design, d8, fr))));
+          out.farMove = ['run', 'sprint', 'carry'].map(clip => [clip, ['halves', 'quarters'].flatMap(design => [2, 6].flatMap(d8 => Array.from({ length:A.man.clips[clip].n }, (_, fr) => farOf(design, d8, fr, clip))))]);
           out.same = [same({ shirt:C.shirt, trim:C.trim, design:'plain', third:null, hoops:false }, { shirt:C.shirt, trim:C.trim, hoops:false }), same({ shirt:C.shirt, trim:C.trim, design:'hoops', third:null, hoops:true }, { shirt:C.shirt, trim:C.trim, hoops:true })];
           // the bake's cost, per picture, over every idle facing
           const t0 = performance.now(); for (let i = 0; i < 40; i++) for (let d = 0; d < 8; d++) bake(kit('plain', false), d); const tp = performance.now() - t0;
@@ -522,10 +541,12 @@ async function browserChecks() {
         });
         const f = v => Array.isArray(v) ? v.map(f).join(' ') : typeof v === 'number' ? v.toFixed(2) : String(v);
         ok(r.plain[0] < 0.12 && r.plain[1] === 0, `Plain with no third: the shirt colour, the trim at the collar and cuffs only, no third (${f(r.plain)})`);
-        const eg = r.edge.map(e => `${e.d8}: ${e.n} of ${e.left + e.n} ${e.collar}/${e.cuffL}/${e.cuffR}${e.inTrim ? '' : ' off the trim'}${e.socksKept ? '' : ' socks moved'}${e.ds ? ' shirt ' + e.ds : ''}`).join(', ');
-        ok(r.edge.every(e => e.n >= 8 && e.inTrim && e.left > e.n/2 && e.socksKept && e.shirt) && r.edge.filter(e => e.d8 === 0 || e.d8 === 4).every(e => e.collar >= 3 && e.cuffL >= 2 && e.cuffR >= 2),
-          `Plain with a third: the third at the collar and cuffs only, on the trim's own pixels beside the skin, the trim still showing beside it, the shirt as it was and the sock tops in the trim; from behind and in front at the collar and both cuffs (${eg})`);
+        const eg = r.edge.map(e => `${e.d8}: ${e.n} beside ${e.trim} ${e.collar}/${e.cuffL}/${e.cuffR}${e.onShirt ? '' : ' off the shirt'}${e.alongside ? '' : ' away from the trim'}${e.trimKept ? '' : ' trim lost'}${e.rest ? ' shirt ' + e.rest : ''}${e.socksKept ? '' : ' socks moved'}`).join(', ');
+        ok(r.edge.every(e => e.n >= 18 && e.onShirt && e.alongside && e.trimKept && e.rest === 0 && e.socksKept) && r.edge.filter(e => e.d8 === 0 || e.d8 === 4).every(e => e.collar >= 5 && e.cuffL >= 6 && e.cuffR >= 6),
+          `Plain with a third: a band of the third alongside the collar and cuffs only, on the shirt's own pixels beside the trim, the trim's every pixel kept, the rest of the shirt as it was and the sock tops in the trim; from behind and in front at the collar and both cuffs (${eg})`);
         ok(r.far.every(v => v > 0.28 && v < 0.42), `Halves and Quarters side on: the far half about a third of the shirt by hue, standing, facing either way (1.8: 0.21) (${f(r.far)})`);
+        const mv = r.farMove.map(([clip, v]) => `${clip} ${v.length} frames ${Math.min(...v).toFixed(2)} to ${Math.max(...v).toFixed(2)}`).join(', ');
+        ok(r.farMove.every(([, v]) => v.length >= 8 && v.every(x => x > 0.28 && x < 0.42)), `Halves and Quarters side on, moving: the far half about a third of the shirt by hue in every frame of the run, the sprint and the carry, facing either way (${mv})`);
         ok(r.hoops[0] > 0.25 && r.hoops[1] > 0.12 && r.hoops[2] > 0.12, `Hoops: the trim's hoops, and with a third the hoops in turn (${f(r.hoops)})`);
         ok(r.halves[0] < -4 && r.halves[1] > 4 && r.halves[2] > r.halves[3] && r.halves[5] > r.halves[4] && r.halves[6] > 0, `Halves: his left in the trim, the picture's left from behind and its right from in front; side on his right shows the shirt colour and his left (a mirrored bake) the trim; the third on the collar (${f(r.halves)})`);
         ok(r.quarters[0] < -4 && r.quarters[1] > 4 && r.quarters[2] > 0.3, `Quarters from behind: the trim his left shoulder (the picture's top left) and his right hip (${f(r.quarters)})`);
@@ -576,7 +597,7 @@ async function browserChecks() {
           D.exitMatch(); D.setMode('menu');
           return out;
         });
-        ok(json(w.kit) === json(['#109a52', '#7c1431']) && w.wb >= 6 && w.wf >= 6 && w.ob >= 6 && w.of >= 6, `a real match's own bakes (artCell): Wimborne's green edge and Old Colfeians' maroon at the collar and cuffs, from behind and in front (${json(w)})`);
+        ok(json(w.kit) === json(['#109a52', '#7c1431']) && w.wb >= 20 && w.wf >= 20 && w.ob >= 20 && w.of >= 20, `a real match's own bakes (artCell): Wimborne's green edge and Old Colfeians' maroon at the collar and cuffs, from behind and in front, a band of its own beside the trim (inside the trim, as first built, 16 to 28) (${json(w)})`);
       }
       ok(!errors.length, `no page errors in the sprite checks (${errors.join('; ') || 'none'})`);
       await ctx.close();

@@ -24,11 +24,13 @@ function kitThirdOf(t) {
   const c = t.third.toLowerCase();
   return c === String(t.kit).toLowerCase() || c === String(t.trim).toLowerCase() ? null : t.third;
 }
-/* A Plain shirt's third (the owner, 15 Nov 2026: "Show It as a Collar Trim"): a thin edge in the third at the collar and cuffs, at the
-   trim's open edge (the neck, the arm). Kept apart from kitThirdOf, which still answers null for Plain, so the clash rule, the saves and
-   every design's drawing are as they were; none with KITS off, on a design, or where it is the shirt's or the trim's own colour. A club's
-   side saved in a championship, cup or career keeps no third on Plain (kitClean), so, as cleanSide gives a 1.7 save its club's design, a
-   side that is a club in the club's own shirt and trim takes the club's edge. A made side never has one: Create Team gives Plain no third. */
+/* A Plain shirt's third (the owner, 15 Nov 2026: "Show It as a Collar Trim"): a thin edge in the third at the collar and cuffs, beside the
+   trim (the close-ups and the icon at its open edge, the neck and the arm, or outside it for a dark third on the icon; the sprites on the
+   shirt's side of it, where a band of its own reads at match size). Kept apart from kitThirdOf, which still answers null for Plain, so the
+   clash rule, the saves and every design's drawing are as they were; none with KITS off, on a design, or where it is the shirt's or the
+   trim's own colour. A club's side saved in a championship, cup or career keeps no third on Plain (kitClean), so, as cleanSide gives a 1.7
+   save its club's design, a side that is a club in the club's own shirt and trim takes the club's edge. A made side never has one: Create
+   Team gives Plain no third. */
 let KIT_EDGE_CLUBS = null;
 function kitEdgeOf(t) {
   if (!KITS.on || !t || kitDesignOf(t) !== 'plain') return null;
