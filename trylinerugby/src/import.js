@@ -23,6 +23,7 @@ const IMPORT_MSG = {
   full:'Delete a team to make room for this club.',
   offline:'You’re offline. Connect and try again.',
   busy:'Too many imports. Try again in a minute.',
+  service:'Import isn’t working. Try again later.',
 };
 
 /* ---------- fetching: the app's own, or the web's through the import service ---------- */
@@ -31,8 +32,12 @@ const IMPORT_MSG = {
    elsewhere (tools/import-service.mjs's browser run, at a copy on 127.0.0.1); the game never changes it. */
 const IMPORT_SERVICE = 'https://tryline-import.vercel.app/api/import';
 const IMPORT_SERVICE_TIMEOUT = 50000;                     // ms: the service gives a whole import 45 seconds
-const IMPORT_SERVICE_MAX = 200000;                        // characters of an answer read: one import's names and numbers are a few thousand
-const IMPORT_ERRORS = ['url', 'net', 'timeout', 'empty', 'busy'];   // the service's errors, each one of IMPORT_MSG's
+const IMPORT_SERVICE_MAX = 200000;                        // bytes of an answer read, at most: one import's names and numbers are a few thousand
+/* The service's errors, each one of IMPORT_MSG's, by the statuses it sends them with (import-service/lib/service.cjs).
+   Anything else (no answer at all, one that is not JSON, a 403, a 405 or a 500, an error it never sends) is the
+   service itself not working, 'service', so a link that is fine is not blamed for it. 'net' is only the service's
+   word that the page itself could not be read. */
+const IMPORT_ERRORS = { url:[400, 413, 415], net:[502], timeout:[504], empty:[422], busy:[429] };
 let importServiceUrl = IMPORT_SERVICE;
 const IMPORT_WEB = Object.freeze({ service:true });       // importHttp's answer on the web: the service, not a fetch of the page
 /* How this copy of the game fetches. Capacitor's native HTTP when it runs inside the Try Line app (the app still fetches
@@ -65,16 +70,22 @@ async function importService(href, opts = {}) {
   const ctl = typeof AbortController === 'function' ? new AbortController() : null;
   let timer = 0, poll = 0, done = false;
   const ask = async () => {
-    const res = await fetch(importServiceUrl, { method:'POST', headers:{ 'Content-Type':'text/plain' }, body:href, signal:ctl ? ctl.signal : undefined,
-      credentials:'omit', cache:'no-store', referrerPolicy:'no-referrer', redirect:'error', mode:'cors' });
-    const text = await res.text();
+    let res;
+    try {
+      res = await fetch(importServiceUrl, { method:'POST', headers:{ 'Content-Type':'text/plain' }, body:href, signal:ctl ? ctl.signal : undefined,
+        credentials:'omit', cache:'no-store', referrerPolicy:'no-referrer', redirect:'error', mode:'cors' });
+    } catch (e) { throw Error('service'); }                  // refused (no service there, CORS) or the network gone
+    const text = await importBody(res);
     done = true;                                           // the answer is in: nothing left to abort
-    if (typeof text !== 'string' || text.length > IMPORT_SERVICE_MAX) throw Error('net');
-    let j = null; try { j = JSON.parse(text); } catch (e) { throw Error('net'); }
-    if (!j || typeof j !== 'object') throw Error('net');
-    if (j.ok !== true) return { ok:false, error:IMPORT_ERRORS.includes(j.error) ? j.error : 'net', requests:1 };
+    if (text === null) throw Error('service');
+    let j = null; try { j = JSON.parse(text); } catch (e) { throw Error('service'); }
+    if (!j || typeof j !== 'object' || Array.isArray(j)) throw Error('service');
+    if (j.ok !== true) {
+      const known = Object.prototype.hasOwnProperty.call(IMPORT_ERRORS, j.error) && IMPORT_ERRORS[j.error].includes(res.status);
+      return { ok:false, error:known ? j.error : 'service', requests:1 };
+    }
     const data = importClean(j.data);
-    return data ? { ok:true, data, requests:1 } : { ok:false, error:'net', requests:1 };
+    return data ? { ok:true, data, requests:1 } : { ok:false, error:'service', requests:1 };
   };
   try {
     return await Promise.race([
@@ -85,15 +96,34 @@ async function importService(href, opts = {}) {
       }),
     ]);
   } catch (e) {
-    return { ok:false, error:e && (e.message === 'timeout' || e.message === 'cancelled') ? e.message : 'net', requests:1 };
+    return { ok:false, error:e && (e.message === 'timeout' || e.message === 'cancelled') ? e.message : 'service', requests:1 };
   } finally {
     clearTimeout(timer); clearInterval(poll);
     if (ctl && !done) try { ctl.abort(); } catch (e) { /* gone already */ }   // a request still open (Back, the timeout) goes
   }
 }
+/* The service's answer as text, or null when it is over IMPORT_SERVICE_MAX: refused by its Content-Length before a byte
+   is read, else read a chunk at a time and dropped (the rest cancelled) once it passes the limit, so a service gone
+   wrong cannot make the page hold a body of any size. */
+async function importBody(res) {
+  const h = res && res.headers, size = Number(h && typeof h.get === 'function' ? h.get('content-length') : NaN);
+  if (size > IMPORT_SERVICE_MAX) return null;
+  const reader = res.body && typeof res.body.getReader === 'function' ? res.body.getReader() : null;
+  if (!reader) { const t = await res.text(); return typeof t === 'string' && t.length <= IMPORT_SERVICE_MAX ? t : null; }
+  const dec = new TextDecoder();
+  let text = '', bytes = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) return text + dec.decode();
+    bytes += value ? value.byteLength : 0;
+    if (bytes > IMPORT_SERVICE_MAX) { try { reader.cancel().catch(() => {}); } catch (e) { /* gone already */ } return null; }
+    text += dec.decode(value, { stream:true });
+  }
+}
 /* The service's answer, put through importSafe's rules again: a name passes importName, a colour importHex (through
    importPair), a number importNum, at most IMPORT_MAX_ROWS rows of each list, a label only when importLabel reads it as
-   one and a level only by an id levelById knows. A name with a tag in it is dropped whole. Every other key is dropped.
+   one and a level only by an id levelById knows. A name with a tag in it is dropped whole, before importSafe and again
+   after it, since importName decodes entities (&lt;script&gt; is <script> once read). Every other key is dropped.
    Null for anything that is not an object. */
 function importClean(d) {
   if (!d || typeof d !== 'object' || Array.isArray(d)) return null;
@@ -103,7 +133,10 @@ function importClean(d) {
   const source = IMPORT_SOURCES.some(s => s.id === d.source) ? d.source : 'generic';
   const club = obj(d.club) && fair(d.club.name) ? { name:d.club.name, kit:d.club.kit, trim:d.club.trim } : null;
   const out = importSafe(source, { club, league:list(d.league), teams:list(d.teams) }, '');
-  if (typeof d.label === 'string' && d.label.length <= 40 && importLabel(d.label)) out.label = d.label.replace(/\s+/g, ' ').trim();
+  const tagged = v => typeof v !== 'string' || /[<>]/.test(v);
+  if (out.club && tagged(out.club.name)) out.club = null;
+  out.teams = out.teams.filter(t => !tagged(t.name)); out.league = out.league.filter(r => !tagged(r.name));
+  if (typeof d.label === 'string' && d.label.length <= 40 && !/[<>]/.test(d.label) && importLabel(d.label)) out.label = d.label.replace(/\s+/g, ' ').trim();
   const level = typeof d.level === 'string' && levelById(d.level);
   if (level) out.level = level.id;
   return out;
@@ -293,7 +326,9 @@ function importGo() {
   u.armed = false;
   const href = importUrl($('im-url').value);
   if (!href) { u.err = IMPORT_MSG.url; importRender(); return; }
-  if (!importHttp()) { u.step = 'web'; importRender(); return; }
+  const http = importHttp();
+  if (!http) { u.step = 'web'; importRender(); return; }
+  if (http === IMPORT_WEB && typeof navigator !== 'undefined' && navigator.onLine === false) { u.err = IMPORT_MSG.offline; importRender(); return; }   // no sum for nothing
   const token = ++u.token;
   $('m-import').hidden = true;
   importGate(() => { if (token === importUi.token) importRun(href, token); }, () => { if (token === importUi.token) { $('m-import').hidden = false; importFocus(); } });
@@ -390,6 +425,26 @@ $('im-make').addEventListener('click', () => importOffer(true));
 $('im-not').addEventListener('click', () => importOffer(false));
 $('im-url').addEventListener('input', () => { if (importUi.err) { importUi.err = ''; importRender(); } });
 $('im-url').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); importGo(); } });
+/* A controller's ring on the link step (navMove, src/input-devices.js): the link row is the field and Paste, the field
+   no stop for the ring, so down from Paste is Import, and up from the row under it is Paste. Undefined elsewhere: the
+   nearest that way, as everywhere. */
+function importNav(from, dx, dy) {
+  if (importUi.step !== 'link' || dx || !dy) return undefined;
+  const paste = $('im-paste'), go = $('im-go'), on = el => !!el && !el.hidden && !el.disabled;
+  if (dy > 0 && from === paste && on(go)) return go;
+  if (dy < 0 && on(paste) && [go, $('im-back'), $('im-alt')].includes(from)) return paste;
+  return undefined;
+}
+/* Escape on the card is its Back (Back to Teams or Back to Menu, or Not Now), as on the grown-up check and the Minis
+   card, and never the pause behind it. */
+window.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || $('m-import').hidden || !$('m-gate').hidden) return;
+  const back = [...$('m-import').querySelectorAll('[data-back]')].find(el => !el.hidden && !(el.closest && el.closest('[hidden]')));
+  if (!back) return;
+  if (e.stopPropagation) e.stopPropagation();
+  if (e.preventDefault) e.preventDefault();
+  if (!e.repeat) back.click();
+}, true);
 $('im-paste').addEventListener('click', async () => {
   try { const t = await navigator.clipboard.readText(); if (t) { $('im-url').value = t.trim().slice(0, 2048); importUi.err = ''; importRender(); } } catch (e) { /* refused or empty */ }
 });

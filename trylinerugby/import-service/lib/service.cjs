@@ -14,11 +14,16 @@
    safeLookup approved, so a name that resolves to a private, loopback, link-local, shared, multicast, reserved,
    unspecified or documentation address (in IPv4 or IPv6, or an IPv4 address inside an IPv6 one) is never reached, and
    a name that resolves to a public address for the check and a private one for the connection cannot happen: there is
-   one lookup, and the connection uses its answer.
+   one lookup, and the connection uses its answer. Names are resolved by c-ares (dns.promises.Resolver, 3 seconds, one
+   try), never by dns.lookup, whose getaddrinfo holds one of libuv's four pool threads for as long as a slow DNS server
+   keeps it: a few names pointed at one that never answers would stall every import on the instance.
 
-   Only the game's own page may ask (ALLOWED_ORIGIN): any other Origin, or none, is refused before anything is fetched,
-   and gets no CORS header. Each caller may start IMPORT_RATE.max imports a minute, counted in memory by a salted hash
-   of its address, never the address itself.
+   The Origin check (ALLOWED_ORIGIN) stops other websites using the service from a browser: any other Origin, or none,
+   is refused before anything is fetched, and gets no CORS header. It does nothing against a script, which can send
+   any Origin it likes, so the real bound on everyone else is the rate: each caller (an IPv4 address, or an IPv6 /64)
+   may start IMPORT_RATE.max imports a minute and IMPORT_RATE.busy may run at once, counted in memory on each
+   instance by a salted hash of the address, never the address itself. Across instances the owner's Vercel Firewall
+   rule bounds it (README.md).
    ========================================================= */
 const crypto = require('node:crypto');
 const net = require('node:net');
@@ -30,7 +35,8 @@ const ALLOWED_ORIGIN = 'https://gordonlindsay.github.io';
 const TEST_ORIGIN = /^http:\/\/127\.0\.0\.1:\d{2,5}$/;
 const MAX_BODY = 4096;                                  // bytes of a request's body: a link, not a page
 const BUDGET = 45000;                                   // ms one import may take in all, under the function's 60 (vercel.json)
-const IMPORT_RATE = { max:6, per:60000, keep:5000, busy:20 };   // imports a caller a minute, callers remembered, imports at once
+const IMPORT_RATE = { max:6, per:60000, keep:5000, busy:20 };   // imports a caller a minute, callers remembered, imports at once (on this instance)
+const DNS_TIMEOUT = 3000;                               // ms one DNS query may take, one try, on c-ares
 const TEXT = /^(?:text\/[a-z0-9.+-]+|application\/(?:[a-z0-9.-]+\+)?(?:json|xml))$/;
 const ERRORS = { url:400, net:502, timeout:504, empty:422 };
 
@@ -89,22 +95,29 @@ function blocked(address) {
   return true;
 }
 const refused = () => Object.assign(new Error('refused'), { code:'EREFUSED' });
-/* The lookup every request connects through: the name resolved once, refused whole if any answer is an address above,
-   and the answer it gives is what the connection uses. A name that is itself an address is refused too. */
+/* The lookup every request connects through: the name resolved once (its A and AAAA records, over resolver: c-ares,
+   off libuv's thread pool), refused whole if any answer is an address above, and the answer it gives is what the
+   connection uses. A name that is itself an address is refused too. One family failing (no AAAA, say) leaves the
+   other's answer; both failing is the lookup's error. */
+const resolver = () => new (require('node:dns').promises.Resolver)({ timeout:DNS_TIMEOUT, tries:1 });
 function safeLookup(dns) {
+  const ask = (fn, host) => { try { return Promise.resolve(dns[fn](host)); } catch (e) { return Promise.reject(e); } };
   return (hostname, options, cb) => {
     if (typeof options === 'function') { cb = options; options = {}; }
     options = options && typeof options === 'object' ? options : {};
-    if (net.isIP(String(hostname).replace(/^\[|\]$/g, ''))) { cb(refused()); return; }
-    dns.lookup(hostname, { all:true, verbatim:true }, (err, list) => {
-      if (err) { cb(err); return; }
-      const all = (Array.isArray(list) ? list : []).filter(a => a && typeof a.address === 'string');
-      if (!all.length || all.some(a => blocked(a.address))) { cb(refused()); return; }
+    const host = String(hostname);
+    if (net.isIP(host.replace(/^\[|\]$/g, ''))) { cb(refused()); return; }
+    const answer = ([a, b]) => {
+      if (a.status === 'rejected' && b.status === 'rejected') return [a.reason instanceof Error ? a.reason : Object.assign(Error('not found'), { code:'ENOTFOUND' })];
+      const all = [a, b].flatMap(r => (r.status === 'fulfilled' && Array.isArray(r.value) ? r.value : [])).map(x => (x && typeof x === 'object' ? x.address : x)).filter(x => typeof x === 'string');
+      if (!all.length || all.some(x => blocked(x))) return [refused()];
       const family = options.family === 4 || options.family === 6 ? options.family : 0;
-      const pick = all.map(a => ({ address:a.address, family:net.isIP(a.address) })).filter(a => !family || a.family === family);
-      if (!pick.length) { cb(refused()); return; }
-      if (options.all) cb(null, pick); else cb(null, pick[0].address, pick[0].family);
-    });
+      const pick = all.map(address => ({ address, family:net.isIP(address) })).filter(x => !family || x.family === family);
+      if (!pick.length) return [refused()];
+      return options.all ? [null, pick] : [null, pick[0].address, pick[0].family];
+    };
+    Promise.allSettled([ask('resolve4', host), ask('resolve6', host)]).then(answer).catch(() => [refused()])
+      .then(args => process.nextTick(() => cb(...args)));   // the callback outside the promise chain, so it runs once whatever it does
   };
 }
 
@@ -186,10 +199,22 @@ function only(d) {
   if (typeof d.level === 'string') out.level = d.level;
   return out;
 }
+/* The caller a rate counts, as Vercel's edge saw it: x-vercel-forwarded-for, else x-real-ip, which the edge sets itself
+   (over anything a client sent), else the socket's peer. Never x-forwarded-for: off Vercel a client writes that. An
+   IPv6 caller is its /64, the block one connection is usually handed whole, so walking its addresses gains nothing; an
+   IPv4 address inside IPv6 is that IPv4 address. */
+function caller(req) {
+  const ip = header(req, 'x-vercel-forwarded-for').split(',')[0].trim() || header(req, 'x-real-ip').split(',')[0].trim() || (req.socket && typeof req.socket.remoteAddress === 'string' ? req.socket.remoteAddress : '');
+  if (net.isIP(ip) !== 6) return ip;
+  const g = ipv6(ip);
+  if (!g) return ip;
+  if (g.slice(0, 5).every(x => x === 0) && g[5] === 0xffff) return [g[6] >> 8, g[6] & 255, g[7] >> 8, g[7] & 255].join('.');
+  return g.slice(0, 4).map(x => x.toString(16)).join(':') + '::/64';
+}
 /* The handler. deps are the tests' (tools/import-service.mjs): their own https and dns (a stub serving fixture pages),
    sleep, clock, budget, floor, timeout and gap. Vercel calls it with none. */
 function makeHandler(deps = {}) {
-  const https = deps.https || require('node:https'), dns = deps.dns || require('node:dns');
+  const https = deps.https || require('node:https'), dns = deps.dns || resolver();
   const now = deps.now || Date.now, wait = deps.sleep || (ms => new Promise(r => setTimeout(r, ms)));
   const budget = deps.budget ?? BUDGET, timeout = deps.timeout ?? core.IMPORT_TIMEOUT, gap = deps.gap, floor = deps.floor ?? 1500;
   const origins = new Set([ALLOWED_ORIGIN]);
@@ -197,16 +222,18 @@ function makeHandler(deps = {}) {
   if (typeof test === 'string' && TEST_ORIGIN.test(test)) origins.add(test);
   const salt = crypto.randomBytes(16), seen = new Map();
   let running = 0;
-  /* One more import for this caller, or false when it has had IMPORT_RATE.max this minute or too many run at once. */
+  /* One more import for this caller, or false when it has had IMPORT_RATE.max this minute or too many run at once. A
+     yes counts as running at once there and then, before the body is read, so callers arriving together cannot all
+     pass the check before any is counted; the handler's finally gives the place back. */
   const take = req => {
     if (running >= IMPORT_RATE.busy) return false;
-    const ip = header(req, 'x-real-ip') || header(req, 'x-forwarded-for').split(',')[0].trim() || (req.socket && req.socket.remoteAddress) || '';
-    const key = crypto.createHmac('sha256', salt).update(ip).digest('base64'), t = now();
+    const key = crypto.createHmac('sha256', salt).update(caller(req)).digest('base64'), t = now();
     const list = (seen.get(key) || []).filter(x => t - x < IMPORT_RATE.per);
     seen.delete(key);
     if (list.length >= IMPORT_RATE.max) { seen.set(key, list); return false; }
     list.push(t); seen.set(key, list);
     while (seen.size > IMPORT_RATE.keep) seen.delete(seen.keys().next().value);   // the longest quiet first
+    running++;
     return true;
   };
   const run = async href => {
@@ -219,7 +246,7 @@ function makeHandler(deps = {}) {
       ]);
     } finally { clearTimeout(timer); }
   };
-  return async function importService(req, res) {
+  const importService = async (req, res) => {
     const origin = header(req, 'origin'), allowed = origins.has(origin) ? origin : '';
     const send = (status, body, extra) => {
       res.statusCode = status;
@@ -233,6 +260,7 @@ function makeHandler(deps = {}) {
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
       res.end(JSON.stringify(body));
     };
+    let taken = false;
     try {
       const method = String(req.method || '').toUpperCase();
       let query; try { query = new URL(String(req.url || '/'), 'https://service.invalid').searchParams; } catch (e) { query = new URLSearchParams(); }
@@ -245,22 +273,25 @@ function makeHandler(deps = {}) {
       if (method !== 'POST') { send(405, { ok:false, error:'net' }, { Allow:'GET, POST, OPTIONS' }); return; }
       if (!allowed) { send(403, { ok:false, error:'net' }); return; }
       if (!take(req)) { send(429, { ok:false, error:'busy' }, { 'Retry-After':'60' }); return; }
+      taken = true;
       if (header(req, 'content-type').split(';')[0].trim().toLowerCase() !== 'text/plain') { send(415, { ok:false, error:'url' }); return; }
       const body = await readBody(req);
       if (body === null) { send(413, { ok:false, error:'url' }); return; }
       const href = core.importUrl(body);
       if (!href) { send(400, { ok:false, error:'url' }); return; }
-      running++;
-      let r;
-      try { r = await run(href); } finally { running--; }
+      const r = await run(href);
       if (!r.ok) { const error = r.error === 'url' ? 'url' : r.error === 'timeout' || r.error === 'cancelled' ? 'timeout' : 'net'; send(ERRORS[error], { ok:false, error }); return; }
       const d = r.data;
       if (!d.club && !d.league.length && !d.teams.length) { send(ERRORS.empty, { ok:false, error:'empty' }); return; }
       send(200, { ok:true, data:only(d), requests:r.requests });
     } catch (e) {
       if (!res.headersSent && !res.writableEnded) send(500, { ok:false, error:'net' });
+    } finally {
+      if (taken) running--;
     }
   };
+  importService.running = () => running;                  // the tests': imports this instance counts as running now
+  return importService;
 }
 
-module.exports = { makeHandler, blocked, safeLookup, network, ALLOWED_ORIGIN, MAX_BODY, BUDGET, IMPORT_RATE };
+module.exports = { makeHandler, blocked, safeLookup, caller, resolver, network, ALLOWED_ORIGIN, MAX_BODY, BUDGET, IMPORT_RATE, DNS_TIMEOUT };

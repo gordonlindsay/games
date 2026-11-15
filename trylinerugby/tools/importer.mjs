@@ -252,12 +252,15 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   native(false); reset();
   const nodeFetch = globalThis.fetch, nav = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
   const posts = []; let answer = null, aborted = 0;
+  const STATUS = { url:400, net:502, timeout:504, empty:422, busy:429 };   // as import-service/lib/service.cjs sends each
   globalThis.fetch = async (url, init) => {
     posts.push({ url, init });
     if (init && init.signal) init.signal.addEventListener('abort', () => { aborted++; });
     if (answer instanceof Error) throw answer;
     if (answer === 'hang') return new Promise(() => {});
-    return { ok:true, status:200, text:async () => (typeof answer === 'string' ? answer : JSON.stringify(answer)) };
+    if (answer && answer.raw) return answer.raw;              // an answer as it stands: its own status, headers and body
+    const status = answer && typeof answer === 'object' && answer.ok === false ? STATUS[answer.error] || 500 : 200;
+    return { ok:status < 300, status, text:async () => (typeof answer === 'string' ? answer : JSON.stringify(answer)) };
   };
   globalThis.location = { protocol:'https:' };
   ok(I.http() === I.WEB, 'a page loaded over https fetches through the import service');
@@ -288,13 +291,42 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   answer = { ok:true, requests:1, data:{ source:'pitchero', club:{ name:'Bracknell RFC', kit:'#399913', trim:'#e4c200' }, teams:[], league:[], label:'U10s', level:'r2' } };
   const lv = await I.fetch(LG);
   ok(lv.data.label === 'U10s' && lv.data.level === 'r2' && lv.data.source === 'pitchero' && lv.data.club.kit === '#399913', 'a real label and level id are kept');
-  for (const [bad, want, what] of [[{ ok:false, error:'busy' }, 'busy', 'busy'], [{ ok:false, error:'timeout' }, 'timeout', 'a timeout'], [{ ok:false, error:'empty' }, 'empty', 'an empty page'], [{ ok:false, error:'<b>pwned</b>' }, 'net', 'an unknown error'],
-    ['not json', 'net', 'an answer that is not JSON'], ['x'.repeat(300000), 'net', 'an answer far too long'], [{ ok:true, data:null }, 'net', 'no data'], [{ ok:true, data:[1, 2] }, 'net', 'data that is a list'], [Error('Failed to fetch'), 'net', 'a refused request (CORS, or no network)']]) {
+  // the entity-encoded tag: importName decodes &lt; to <, so the tag check runs again after importSafe, and nothing with a tag in it is kept
+  answer = { ok:true, requests:1, data:{ source:'generic', club:{ name:'&lt;img src=x onerror=alert(1)&gt; Hornets RFC' }, teams:[{ name:'&lt;script&gt;alert(1)&lt;/script&gt; Rovers' }, { name:'&#60;b&#62;Bold&#60;/b&#62; RFC' }, { name:'Valley Vipers' }],
+    league:[{ name:'&lt;i&gt;Ash Grove&lt;/i&gt;', won:1 }, { name:'Birch Lane', won:2 }], label:'&lt;b&gt;U10s' } };
+  const ent = await I.fetch(LG), entText = JSON.stringify(ent.data);
+  ok(ent.ok && ent.data.club === null && ent.data.teams.map(t => t.name).join() === 'Valley Vipers' && ent.data.league.map(x => x.name).join() === 'Birch Lane' && !/[<>]|script|onerror|alert/.test(entText) && !('label' in ent.data), `an entity-encoded tag is dropped once decoded, as a literal one is (${entText})`);
+  for (const [bad, want, what] of [[{ ok:false, error:'busy' }, 'busy', 'busy'], [{ ok:false, error:'timeout' }, 'timeout', 'a timeout'], [{ ok:false, error:'empty' }, 'empty', 'an empty page'], [{ ok:false, error:'net' }, 'net', 'a page the service could not read'],
+    [{ ok:false, error:'url' }, 'url', 'a link the service refused'], [{ ok:false, error:'<b>pwned</b>' }, 'service', 'an unknown error'],
+    ['not json', 'service', 'an answer that is not JSON'], ['x'.repeat(300000), 'service', 'an answer far too long'], [{ ok:true, data:null }, 'service', 'no data'], [{ ok:true, data:[1, 2] }, 'service', 'data that is a list'], [[1, 2], 'service', 'an answer that is a list'],
+    [Error('Failed to fetch'), 'service', 'a refused request (no service there, or CORS)'],
+    [{ raw:{ ok:false, status:403, text:async () => '{"ok":false,"error":"net"}' } }, 'service', 'the service refusing the game\'s own page (403)'],
+    [{ raw:{ ok:false, status:405, text:async () => '{"ok":false,"error":"net"}' } }, 'service', 'a 405'],
+    [{ raw:{ ok:false, status:500, text:async () => '<html><body>Internal Server Error</body></html>' } }, 'service', 'a 500 HTML page'],
+    [{ raw:{ ok:false, status:500, text:async () => '{"ok":false,"error":"net"}' } }, 'service', 'the service\'s own 500'],
+    [{ raw:{ ok:false, status:404, text:async () => 'The page could not be found' } }, 'service', 'no function at that address (404)'],
+    [{ raw:{ ok:true, status:200, text:async () => '{"ok":false,"error":"busy"}' } }, 'service', 'an error with a status the service never sends it with']]) {
     answer = bad;
     const x = await I.fetch(LG);
-    ok(!x.ok && x.error === want && (I.MSG[x.error] || want === 'net'), `${what} is ${want}`);
+    ok(!x.ok && x.error === want && I.MSG[x.error], `${what} is ${want}`);
   }
   ok(I.MSG.busy === 'Too many imports. Try again in a minute.' && I.MSG.offline && I.MSG.offline.length <= 45, 'busy and offline have their own words');
+  ok(I.MSG.service === 'Import isn\u2019t working. Try again later.' && I.MSG.service !== I.MSG.net && !/link/i.test(I.MSG.service), 'the service down has its own words, and never blames the link');
+  // the answer's size: refused by its Content-Length before a byte is read, else read in chunks and dropped (the rest cancelled) once over the limit
+  let readText = 0;
+  answer = { raw:{ ok:true, status:200, headers:{ get:k => (k.toLowerCase() === 'content-length' ? '5000000' : null) }, text:async () => { readText++; return '{}'; }, body:{ getReader:() => { readText++; return null; } } } };
+  const declared = await I.fetch(LG);
+  ok(!declared.ok && declared.error === 'service' && readText === 0, 'an answer that says it is too long is never read');
+  const stream = (chunks, endless) => { let i = 0, cancelled = 0, reads = 0; const enc = new TextEncoder(); return { get cancelled() { return cancelled; }, get reads() { return reads; }, reader:{ read:async () => { reads++; if (endless) return { done:false, value:new Uint8Array(65536).fill(32) }; return i < chunks.length ? { done:false, value:chunks[i++] } : { done:true, value:undefined }; }, cancel:async () => { cancelled++; } }, enc }; };
+  const endless = stream([], true);
+  answer = { raw:{ ok:true, status:200, headers:{ get:() => null }, text:async () => { readText++; return ''; }, body:{ getReader:() => endless.reader } } };
+  const flood = await I.fetch(LG);
+  ok(!flood.ok && flood.error === 'service' && endless.cancelled === 1 && endless.reads <= 5 && readText === 0, `an endless answer is read to the limit and no further (${endless.reads} chunks), the rest cancelled`);
+  const whole = new TextEncoder().encode(JSON.stringify({ ok:true, requests:1, data:{ source:'generic', club:{ name:'Café Rovers RFC', kit:'#123456', trim:'#abcdef' }, teams:[], league:[] } }));
+  const at = whole.indexOf(0xc3) + 1, split = stream([whole.slice(0, at), whole.slice(at)]);   // cut inside the é
+  answer = { raw:{ ok:true, status:200, headers:{ get:() => String(whole.length) }, body:{ getReader:() => split.reader } } };
+  const streamed = await I.fetch(LG);
+  ok(streamed.ok && streamed.data.club.name === 'Café Rovers RFC' && split.cancelled === 0, `a normal answer read in chunks, a character cut between two of them whole again (${streamed.ok && streamed.data.club.name})`);
   answer = 'hang'; aborted = 0;
   const t0 = Date.now(), slow = await I.fetch(LG, { timeout:30 });
   ok(!slow.ok && slow.error === 'timeout' && aborted === 1 && Date.now() - t0 < 2000, 'a service that never answers times out, its request aborted');
@@ -325,6 +357,22 @@ const reset = () => { calls.length = 0; for (const k of Object.keys(pages)) dele
   I.open(); $('im-url').value = LG; I.go(); gate.go();
   for (let i = 0; i < 20 && I.state().step === 'busy'; i++) await tick();
   ok(I.state().step === 'link' && $('im-err').textContent === I.MSG.busy && !$('im-err').hidden, 'busy says so, back on the link');
+  answer = { raw:{ ok:false, status:500, text:async () => '<html>Internal Server Error</html>' } };
+  $('im-url').value = LG; I.go(); gate.go();
+  for (let i = 0; i < 20 && I.state().step === 'busy'; i++) await tick();
+  ok(I.state().step === 'link' && $('im-err').textContent === I.MSG.service, 'a broken service says so, not that the link is wrong');
+  // offline: said before the grown-up check, so nobody does the sum for nothing
+  const nav2 = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  Object.defineProperty(globalThis, 'navigator', { value:{ onLine:false }, configurable:true, writable:true });
+  gate = null; const sent = posts.length;
+  $('im-url').value = LG; I.go();
+  ok(gate === null && !$('m-import').hidden && I.state().step === 'link' && $('im-err').textContent === I.MSG.offline && !$('im-err').hidden && posts.length === sent, 'offline: said on the card before the grown-up check, and nothing sent');
+  if (nav2) Object.defineProperty(globalThis, 'navigator', nav2); else delete globalThis.navigator;
+  // a controller's ring on the link step: down from Paste is Import, up from the row under it is Paste
+  $('im-paste').hidden = false; $('im-paste').disabled = false;
+  ok(I.nav($('im-paste'), 0, 1) === $('im-go') && I.nav($('im-back'), 0, -1) === $('im-paste') && I.nav($('im-go'), 0, -1) === $('im-paste') && I.nav($('im-paste'), 1, 0) === undefined && I.nav($('im-back'), 0, 1) === undefined, 'the ring: down from Paste to Import, up from Import or Back to Paste, anything else the nearest');
+  $('im-paste').hidden = true;
+  ok(I.nav($('im-back'), 0, -1) === undefined, 'with no Paste button, up is the nearest as everywhere');
   $('im-back').click();
   delete globalThis.fetch;
   ok(I.http() === null, 'a browser with no fetch has nothing to fetch with');

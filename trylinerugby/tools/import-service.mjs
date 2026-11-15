@@ -4,6 +4,7 @@
 // Vercel set-up, and, where Playwright is installed, the web build importing through a local copy of the service by touch.
 // node tools/import-service.mjs   (SHOTS=<dir> keeps the browser run's screenshots)
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
 import http from 'node:http';
@@ -71,7 +72,12 @@ for (const a of PUBLIC) ok(!S.blocked(a), `${a} is a public address`);
    calls the request's own lookup, as node:https does, and serves only once that lookup has given an address. */
 function stubNet({ names = {}, sites = {} } = {}) {
   const log = { requests:[], served:[], written:0, cut:false };
-  const dns = { lookup(host, opts, cb) { const a = names[host]; setImmediate(() => (a ? cb(null, [].concat(a).map(address => ({ address, family:address.includes(':') ? 6 : 4 }))) : cb(Object.assign(Error('not found'), { code:'ENOTFOUND' })))); } };
+  /* a c-ares Resolver's resolve4 and resolve6, as the service asks: the name's answers of that family, or ENODATA */
+  const family = v6 => host => new Promise((ok, no) => setImmediate(() => {
+    const all = names[host] === undefined ? null : [].concat(names[host]).filter(a => a.includes(':') === v6);
+    if (all && all.length) ok(all); else no(Object.assign(Error('no data'), { code:all ? 'ENODATA' : 'ENOTFOUND' }));
+  }));
+  const dns = { resolve4:family(false), resolve6:family(true) };
   const https = { request(options, onResponse) {
     log.requests.push(options);
     const req = new EventEmitter();
@@ -115,10 +121,10 @@ const fakeReq = ({ method = 'POST', url = '/api/import', origin = ORIGIN, type =
 };
 const fakeRes = () => ({ statusCode:200, headers:{}, body:'', ended:false, setHeader(k, v) { this.headers[k.toLowerCase()] = String(v); }, getHeader(k) { return this.headers[k.toLowerCase()]; }, end(b) { this.body = b == null ? '' : String(b); this.ended = true; } });
 const spoken = [];
-const quiet = async fn => {                                 // every console call while fn runs is caught: the service must make none
-  const kept = {};
-  for (const k of ['log', 'info', 'warn', 'error', 'debug', 'trace', 'dir']) { kept[k] = console[k]; console[k] = (...a) => spoken.push(a.map(String).join(' ')); }
-  try { return await fn(); } finally { Object.assign(console, kept); }
+let hushed = 0, kept = null;
+const quiet = async fn => {                                 // every console call while fn runs is caught: the service must make none. Calls may overlap (imports at once): the console comes back when the last ends
+  if (!hushed++) { kept = {}; for (const k of ['log', 'info', 'warn', 'error', 'debug', 'trace', 'dir']) { kept[k] = console[k]; console[k] = (...a) => spoken.push(a.map(String).join(' ')); } }
+  try { return await fn(); } finally { if (!--hushed) Object.assign(console, kept); }
 };
 const call = async (handler, o) => { const res = fakeRes(); await quiet(() => handler(fakeReq(o), res)); let json = null; try { json = res.body ? JSON.parse(res.body) : null; } catch (e) { json = 'not json'; } return { res, json, status:res.statusCode, h:res.headers }; };
 const { makeHandler } = require(path.join(svc, 'api/import.js'));
@@ -218,6 +224,31 @@ const shaped = d => Object.keys(d).every(k => ['source', 'club', 'teams', 'leagu
   ok((await call(hr, { body:PIT + '/teams/3100/league-table', ip:'203.0.113.60', headers:{ 'x-forwarded-for':'198.51.100.99' } })).status === 429, 'Vercel\'s x-real-ip is the caller, whatever x-forwarded-for says');
   clock += 61000;
   ok((await call(hr, { body:PIT + '/teams/3100/league-table', ip:'203.0.113.60' })).status === 200, 'a minute later it may import again');
+  // who the caller is: Vercel's own headers, never x-forwarded-for, and an IPv6 caller by its /64
+  ok(S.caller({ headers:{ 'x-vercel-forwarded-for':'198.51.100.7', 'x-real-ip':'203.0.113.9', 'x-forwarded-for':'192.0.2.1' } }) === '198.51.100.7' && S.caller({ headers:{ 'x-real-ip':'203.0.113.9', 'x-forwarded-for':'192.0.2.1' } }) === '203.0.113.9'
+    && S.caller({ headers:{ 'x-forwarded-for':'192.0.2.1' }, socket:{ remoteAddress:'10.1.1.1' } }) === '10.1.1.1', 'the caller: x-vercel-forwarded-for, else x-real-ip, else the socket; never x-forwarded-for');
+  ok(S.caller({ headers:{ 'x-real-ip':'2a00:1450:4009:81f::200e' } }) === '2a00:1450:4009:81f::/64' && S.caller({ headers:{ 'x-real-ip':'2a00:1450:4009:081f:ffff:1:2:3' } }) === '2a00:1450:4009:81f::/64' && S.caller({ headers:{ 'x-real-ip':'::ffff:198.51.100.7' } }) === '198.51.100.7', 'an IPv6 caller is its /64; an IPv4 address inside IPv6 is that address');
+  clock += 61000;
+  const v6 = [];
+  for (let i = 0; i < 8; i++) v6.push((await call(hr, { body:PIT + '/teams/3100/league-table', ip:`2a00:1450:4009:81f:${(i * 4099 + 1).toString(16)}:${i + 7}::${i + 1}` })).status);
+  ok(v6.slice(0, 6).every(x => x === 200) && v6.slice(6).every(x => x === 429), `walking the addresses of one IPv6 /64 is one caller: six, then busy (${v6})`);
+  ok((await call(hr, { body:PIT + '/teams/3100/league-table', ip:'2a00:1450:4009:820::1' })).status === 200, 'the next /64 is another caller');
+  const spoof = [];
+  for (let i = 0; i < 8; i++) spoof.push((await call(hr, { body:PIT + '/teams/3100/league-table', ip:null, headers:{ 'x-forwarded-for':`198.51.100.${i + 10}` } })).status);
+  ok(spoof.slice(0, 6).every(x => x === 200) && spoof.slice(6).every(x => x === 429), `with no Vercel header, an x-forwarded-for the client wrote changes nothing: one socket, one caller (${spoof})`);
+  const vf = [];
+  for (let i = 0; i < 7; i++) vf.push((await call(hr, { body:PIT + '/teams/3100/league-table', ip:`203.0.113.${120 + i}`, headers:{ 'x-vercel-forwarded-for':'198.51.100.200' } })).status);
+  ok(vf.slice(0, 6).every(x => x === 200) && vf[6] === 429, `x-vercel-forwarded-for is the caller, whatever x-real-ip says (${vf})`);
+  // at once: IMPORT_RATE.busy imports, counted as each is let in, before its body is read, so callers arriving together cannot all pass
+  const slow = stubNet({ names:NAMES, sites:{ 'www.pitchero.com/clubs/bracknell/teams/3100/league-table':{ hang:true } } });
+  const hc = makeHandler({ https:slow.https, dns:slow.dns, sleep:() => {}, timeout:150 });
+  const crowd = await Promise.all(Array.from({ length:S.IMPORT_RATE.busy + 5 }, (_, i) => call(hc, { body:PIT + '/teams/3100/league-table', ip:`203.0.${i}.1` })));
+  const busy = crowd.filter(x => x.status === 429).length;
+  ok(busy === 5 && crowd.filter(x => x.status === 504).length === S.IMPORT_RATE.busy && slow.log.requests.length === S.IMPORT_RATE.busy, `${S.IMPORT_RATE.busy + 5} at once, bodies still streaming: ${S.IMPORT_RATE.busy} run, 5 are busy (${busy}), and only ${S.IMPORT_RATE.busy} reach the page (${slow.log.requests.length})`);
+  ok(hc.running() === 0, `and every place is given back once they end (${hc.running()})`);
+  const refusedKinds = [{ body:'javascript:alert(1)' }, { body:'x'.repeat(5000) }, { body:PIT, type:'application/json' }];
+  for (let i = 0; i < S.IMPORT_RATE.busy + 3; i++) await call(hc, { ...refusedKinds[i % 3], ip:`203.0.114.${i}` });
+  ok(hc.running() === 0 && (await call(hc, { body:'https://www.pitchero.com/clubs/bracknell/teams/3100/league-table', ip:'203.0.115.1' })).status === 504, 'a bad link, a body too big or the wrong type gives its place back too: none is left counted');
   const svcText = read('import-service/lib/service.cjs') + read('import-service/api/import.js');
   ok(!/console\.|process\.stdout|process\.stderr/.test(svcText.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')) && spoken.length === 0, 'the service has no console call, and made none');
   ok(!/\bfetch\(|undici/.test(svcText.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')), 'node:https only: no fetch, no undici');
@@ -240,17 +271,35 @@ const shaped = d => Object.keys(d).every(k => ['source', 'club', 'teams', 'leagu
   // connection is ever opened (nothing here leaves the machine)
   for (const addr of ['127.0.0.1', '169.254.169.254', '::ffff:10.0.0.1']) {
     const asked = [];
-    const real = makeHandler({ dns:{ lookup:(h, o, cb) => { asked.push(h); cb(null, [{ address:addr, family:addr.includes(':') ? 6 : 4 }]); } }, sleep:() => {} });
+    const real = makeHandler({ dns:{ resolve4:async h => { asked.push(h); if (addr.includes(':')) throw Object.assign(Error('no data'), { code:'ENODATA' }); return [addr]; }, resolve6:async h => { if (!addr.includes(':')) throw Object.assign(Error('no data'), { code:'ENODATA' }); return [addr]; } }, sleep:() => {} });
     const x = await call(real, { body:'https://www.rebind-rfc.co.uk/', ip:'203.0.113.73' });
     ok(x.json.error === 'net' && asked.join() === 'www.rebind-rfc.co.uk', `with node:https itself, a name resolving to ${addr} goes through the service's lookup and is refused`);
   }
-  const lookup = S.safeLookup({ lookup:(h, o, cb) => cb(null, [{ address:'151.101.2.10', family:4 }, { address:'2a00:1450:4009:81f::200e', family:6 }]) });
-  const got = [];
-  lookup('www.pitchero.com', { all:true }, (e, a) => got.push(JSON.stringify(a)));
-  lookup('www.pitchero.com', { family:6 }, (e, a, f) => got.push(a + ' ' + f));
-  lookup('www.pitchero.com', (e, a, f) => got.push(a + ' ' + f));
-  lookup('127.0.0.1', {}, e => got.push(e && e.code));
+  const lookup = S.safeLookup({ resolve4:async () => ['151.101.2.10'], resolve6:async () => ['2a00:1450:4009:81f::200e'] });
+  const got = [], ask = (...a) => new Promise(r => lookup(a[0], ...(a.length > 2 ? [a[1]] : []), (...x) => { got.push(a[a.length - 1](...x)); r(); }));
+  await ask('www.pitchero.com', { all:true }, (e, a) => JSON.stringify(a));
+  await ask('www.pitchero.com', { family:6 }, (e, a, f) => a + ' ' + f);
+  await ask('www.pitchero.com', (e, a, f) => a + ' ' + f);
+  await ask('127.0.0.1', {}, e => e && e.code);
   ok(got.join('|') === '[{"address":"151.101.2.10","family":4},{"address":"2a00:1450:4009:81f::200e","family":6}]|2a00:1450:4009:81f::200e 6|151.101.2.10 4|EREFUSED', `the lookup answers as node:https asks, and never for an address given as the name (${got.join(' | ')})`);
+  // names are resolved on c-ares (a Resolver: 3 seconds, one try), never dns.lookup's getaddrinfo on libuv's four pool threads, where a slow DNS server could stall every import
+  const dnsMod = require('node:dns'), libText = read('import-service/lib/service.cjs').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  ok(S.resolver() instanceof dnsMod.promises.Resolver && S.DNS_TIMEOUT === 3000 && /new \(require\('node:dns'\)\.promises\.Resolver\)\(\{ timeout:DNS_TIMEOUT, tries:1 \}\)/.test(libText) && !/\.lookup\(|lookupService|getaddrinfo/.test(libText), 'DNS is a c-ares Resolver with a 3-second timeout and one try; dns.lookup is never called');
+  const kept = dnsMod.lookup; let pooled = 0;
+  dnsMod.lookup = (...a) => { pooled++; return kept(...a); };
+  try {
+    const only4 = await new Promise(r => S.safeLookup({ resolve4:async () => ['151.101.2.10'], resolve6:async () => { throw Object.assign(Error('t'), { code:'ETIMEOUT' }); } })('www.pitchero.com', { all:true }, (e, a) => r(e ? e.code : JSON.stringify(a))));
+    ok(only4 === '[{"address":"151.101.2.10","family":4}]', `no AAAA answer (or a slow one): the A records stand (${only4})`);
+    const neither = await new Promise(r => S.safeLookup({ resolve4:async () => { throw Object.assign(Error('t'), { code:'ETIMEOUT' }); }, resolve6:async () => { throw Object.assign(Error('t'), { code:'ENODATA' }); } })('www.pitchero.com', {}, e => r(e && e.code)));
+    ok(neither === 'ETIMEOUT', 'neither family answering is the lookup\'s error');
+    const mixed6 = await new Promise(r => S.safeLookup({ resolve4:async () => ['151.101.2.10'], resolve6:async () => ['fd00:ec2::254'] })('www.pitchero.com', { family:4 }, e => r(e && e.code)));
+    ok(mixed6 === 'EREFUSED', 'a private AAAA answer refuses the name whole, even when only IPv4 is asked for');
+    const hung = stubNet({ names:NAMES, sites:{ 'www.pitchero.com/clubs/bracknell/teams/3100/league-table':{ body:fx('pitchero-league') } } });
+    hung.dns.resolve4 = hung.dns.resolve6 = () => new Promise(() => {});
+    const hx = await call(makeHandler({ https:hung.https, dns:hung.dns, sleep:() => {}, timeout:80 }), { body:PIT + '/teams/3100/league-table', ip:'203.0.113.74' });
+    ok(hx.status === 504 && hx.json.error === 'timeout' && hung.log.served.length === 0, 'a DNS server that never answers is the request\'s timeout, nothing connected');
+  } finally { dnsMod.lookup = kept; }
+  ok(pooled === 0, `node's dns.lookup was never called (${pooled})`);
 }
 {
   // what a page may be, and how long it may take
@@ -302,13 +351,29 @@ const shaped = d => Object.keys(d).every(k => ['source', 'club', 'teams', 'leagu
 // 5. its Vercel set-up and its words
 {
   const vj = JSON.parse(read('import-service/vercel.json')), pkg = JSON.parse(read('import-service/package.json'));
-  ok(vj.functions['api/import.js'].maxDuration === 60 && JSON.stringify(vj.regions) === '["lhr1"]' && vj.ignoreCommand === 'git diff --quiet HEAD^ HEAD -- .', 'vercel.json: 60 seconds, London, and no deploy for a commit that leaves this folder alone');
+  ok(vj.functions['api/import.js'].maxDuration === 60 && JSON.stringify(vj.regions) === '["lhr1"]' && vj.ignoreCommand === 'if [ -z "$VERCEL_GIT_PREVIOUS_SHA" ]; then exit 1; fi; git diff --quiet "$VERCEL_GIT_PREVIOUS_SHA" HEAD -- .', 'vercel.json: 60 seconds, London, and no deploy unless this folder changed since the last one');
+  // the ignoreCommand, run as Vercel runs it (in the root directory; exit 0 skips the build), in a scratch repository: it compares with the last
+  // deployed commit, so a change in an earlier commit of a push still deploys, the first deploy always builds, and an unknown commit builds
+  {
+    const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'tryline-ignore-')), git = (...a) => execFileSync('git', ['-c', 'user.email=t@t.invalid', '-c', 'user.name=t', ...a], { cwd:scratch, stdio:['ignore', 'pipe', 'ignore'] }).toString().trim();
+    try {
+      git('init', '-q'); fs.mkdirSync(path.join(scratch, 'svc')); fs.writeFileSync(path.join(scratch, 'svc/a'), '1'); git('add', '.'); git('commit', '-qm', 'one');
+      const deployed = git('rev-parse', 'HEAD');
+      const skip = sha => { try { execFileSync('sh', ['-c', vj.ignoreCommand], { cwd:path.join(scratch, 'svc'), env:{ ...process.env, VERCEL_GIT_PREVIOUS_SHA:sha }, stdio:'ignore' }); return true; } catch (e) { return false; } };
+      fs.writeFileSync(path.join(scratch, 'b'), '1'); git('add', '.'); git('commit', '-qm', 'elsewhere');
+      ok(skip(deployed), 'ignoreCommand: a push that leaves the folder alone is skipped');
+      ok(!skip(''), 'ignoreCommand: the first deploy (no previous commit) always builds');
+      fs.writeFileSync(path.join(scratch, 'svc/a'), '2'); git('commit', '-qam', 'the service'); fs.writeFileSync(path.join(scratch, 'b'), '2'); git('commit', '-qam', 'elsewhere again');
+      ok(!skip(deployed), 'ignoreCommand: a push whose change to the folder is not in its last commit still deploys');
+      ok(!skip('0123456789abcdef0123456789abcdef01234567'), 'ignoreCommand: a last deploy it cannot find (a shallow clone) builds');
+    } finally { fs.rmSync(scratch, { recursive:true, force:true }); }
+  }
   ok(S.BUDGET === 45000 && S.BUDGET < vj.functions['api/import.js'].maxDuration * 1000 && S.MAX_BODY === 4096, 'a 45-second budget, under the function\'s 60; 4KB of body');
   ok(!pkg.dependencies && !pkg.devDependencies && pkg.engines.node === '22.x' && pkg.type === 'commonjs', 'package.json: Node 22, no dependencies');
   const api = read('import-service/api/import.js'), lib = read('import-service/lib/service.cjs');
   ok(/require\('\.\.\/lib\/service\.cjs'\)/.test(api) && /require\('\.\/import-core\.cjs'\)/.test(lib) && !/require\((?!'(?:node:[a-z]+|\.\.\/lib\/service\.cjs|\.\/import-core\.cjs)')/.test(api + lib), 'it requires only node: modules and its own lib/, by fixed relative paths Vercel bundles');
   const readme = read('import-service/README.md');
-  ok(['tryline-import', 'trylinerugby/import-service', 'Add New Project', 'Root Directory', '?health=1', 'lhr1', '45', 'TRYLINE_IMPORT_TEST_ORIGIN'].every(w => readme.includes(w)), 'its README says what it is, its limits and how the owner sets it up and checks it');
+  ok(['tryline-import', 'trylinerugby/import-service', 'Add New Project', 'Root Directory', '?health=1', 'lhr1', '45', 'TRYLINE_IMPORT_TEST_ORIGIN', 'Firewall', 'Vercel Authentication', 'per import', 'does nothing against a script', 'VERCEL_GIT_PREVIOUS_SHA', 'non-commercial'].every(w => readme.includes(w)), 'its README says what it is, its limits and how the owner sets it up and checks it');
   for (const [f, t] of [['README.md', readme], ['service.cjs', lib], ['api/import.js', api], ['vercel.json', read('import-service/vercel.json')], ['src/import.js', read('src/import.js')], ['src/import-core.js', read('src/import-core.js')]]) ok(!DASH.test(t), `${f}: no em dash or arrow`);
 }
 
@@ -415,6 +480,53 @@ async function browserChecks() {
       await shot('saved');
       ok(!errors.length, `${w}x${h}: no page errors (${errors.join(' | ')})`);
       await ctx.close();
+    }
+    // from the home at 844x390: Escape is the card's Back; a controller's ring goes down from Paste to Import; a device offline is told
+    // so before the grown-up check; and a service that is not there says Import isn't working, not that the link is wrong
+    {
+      const [w, h] = [844, 390];
+      const ctx = await browser.newContext({ viewport:{ width:w, height:h }, hasTouch:true, isMobile:true, serviceWorkers:'block' });
+      await ctx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin });
+      await ctx.addInitScript(v => { try { localStorage.setItem('tryline.v1', v); } catch (e) { /* none */ } }, JSON.stringify(SAVE));
+      const page = await ctx.newPage(), errors = [], outside = [];
+      page.on('pageerror', e => errors.push(e.message));
+      page.on('request', r => { const u = new URL(r.url()); if (u.hostname !== '127.0.0.1') outside.push(r.url()); });
+      await page.goto(origin + '/index.html');
+      await page.waitForFunction(() => window.__tryline && !document.getElementById('s-home').hidden);
+      await page.evaluate(() => document.fonts && document.fonts.ready);
+      const text = id => page.evaluate(i => document.getElementById(i).textContent, id);
+      const hidden = id => page.evaluate(i => document.getElementById(i).hidden, id);
+      await page.tap('#b-import');
+      await page.waitForFunction(() => !document.getElementById('m-import').hidden);
+      await page.keyboard.press('Escape');
+      ok(await hidden('m-import') && !await hidden('s-home') && await hidden('m-pause'), 'Escape on the card is its Back: closed, home, nothing paused');
+      await page.tap('#b-import');
+      await page.waitForFunction(() => !document.getElementById('m-import').hidden);
+      const ring = await page.evaluate(() => { const T = window.__tryline, id = el => (el && el.id) || ''; return [T.navMove(0, 0, 0), T.navMove(0, 0, 1), T.navMove(0, 1, 0), T.navMove(0, 0, -1), T.navMove(0, 0, 1), T.navMove(0, 0, -1)].map(id).join(); });
+      ok(ring === 'im-paste,im-go,im-back,im-paste,im-go,im-paste', `a controller's ring: on Paste, down to Import, right to Back, up to Paste, and Paste to Import and back (${ring})`);
+      await page.evaluate(t => navigator.clipboard.writeText(t), LINK);
+      await page.tap('#im-paste');
+      await page.waitForFunction(l => document.getElementById('im-url').value === l, LINK);
+      await ctx.setOffline(true);
+      await page.tap('#im-go');
+      await page.waitForTimeout(150);
+      ok(!await hidden('m-import') && await hidden('m-gate') && await text('im-err') === await page.evaluate(() => window.__tryline.importer.MSG.offline), 'offline: said on the card, before the grown-up check');
+      await shot('offline');
+      await ctx.setOffline(false);
+      await page.evaluate(u => window.__tryline.importer.setService(u), `${origin}/api/import`);   // nothing answers there: the game's own server's 404, with no CORS header
+      await page.tap('#im-go');
+      await page.waitForFunction(() => !document.getElementById('m-gate').hidden);
+      const answer = await page.evaluate(() => window.__tryline.kids.gate().answer);
+      for (const d of answer) await page.tap('#pg-k' + d);
+      await page.waitForFunction(() => document.getElementById('im-go').textContent === 'Import' && !document.getElementById('im-err').hidden, null, { timeout:20000 });
+      const said = await text('im-err');
+      ok(said === 'Import isn\u2019t working. Try again later.' && !/link/i.test(said), `no service there: Import isn't working, never Check the link (${said})`);
+      const [, eh, el, er] = await page.evaluate(() => { const r = document.getElementById('im-err').getBoundingClientRect(); return [r.width, r.height, r.left, r.right]; });
+      ok(eh > 0 && el >= 0 && er <= w, `${w}x${h}: the message fits the card`);
+      await shot('service');
+      ok(!errors.length && outside.length === 0, `no page errors and no outside request (${errors.join(' | ')} ${outside.join(' ')})`);
+      await ctx.close();
+      function shot(name) { return shots ? page.screenshot({ path:path.join(shots, `webimport-${name}-${w}x${h}.png`) }) : null; }
     }
   } finally {
     await browser.close();
