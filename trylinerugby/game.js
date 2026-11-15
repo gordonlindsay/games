@@ -12387,6 +12387,7 @@ function champHome() {
     homeNote(note, champNote(champ), champ.teams[champ.user].name);
   } else { $('b-champ').textContent = 'Continue Championship'; note.hidden = true; }
   storeMark($('b-champ'), 'champ');
+  $('hc-fresh').textContent = 'New Championship'; freshArmed = false;
   if (homeTier == null) homeTier = poolTier(myPool() || 'sur');
   for (const b of $('hc-tier').querySelectorAll('[data-tier]')) b.setAttribute('aria-pressed', String(+b.dataset.tier === homeTier));
   const comps = champComps(homeTier), key = comps.map(c => c[0]).join() + (storeLive() && !storeHas('champ') ? ':locked' : '');
@@ -12412,6 +12413,18 @@ $('b-champ').addEventListener('click', () => {
   if (cup) { renderCup(); showScreen('s-cup'); }          // a cup under way (src/ui-cups.js)
   else if (champ) { renderHub(); showScreen('s-hub'); }
   else homeOpen('champ');
+});
+/* New Championship (the owner, 15 Nov 2026: "Choosing game needs to allow a new game here"): under Continue, the saved championship or cup
+   put away as its hub's Start Fresh does, then the tiers and competitions. One with matches left asks again first (the two-tap confirm);
+   a finished one goes at once, as its hub's own New Championship does. */
+let freshArmed = false;
+$('hc-fresh').addEventListener('click', () => {
+  ac();
+  const open = cup ? !!cupFixture(cup) : !!(champ && champ.round < 5);
+  if (open && !freshArmed) { freshArmed = true; confirmArm(); $('hc-fresh').textContent = (isDesk() ? 'Press Again to ' : 'Tap Again to ') + 'Start New'; return; }
+  if (open && confirmSoon()) return;
+  if (cup) { cupRetain(cup); cup = null; } else if (champ) { archiveChampionship(champ); champ = null; }
+  save(); homeOpen('champ');                                  // the tiers and competitions, the focus on the first
 });
 $('b-cabinet').addEventListener('click', () => { renderCabinet('home-history'); showScreen('s-cabinet'); $('s-cabinet').scrollTop = 0; });
 $('cab-back').addEventListener('click', () => goHome($('b-cabinet')));
