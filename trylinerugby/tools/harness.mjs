@@ -145,6 +145,17 @@ export async function rerateProofs(fileUrl, before, ok, was = before) {
   const r = await offRun(fileUrl, { LOCAL:'{"rerate":false}' });
   ok(!r.fails.length && r.last === was, `with the rerating off (LOCAL rerate), as 8089294 (${r.last}, pinned ${was}${tell(r)})`);
 }
+/* Counties 5 Surrey spread by its table (1.9.3, the owner's "Spread by Table", 16 Nov 2026: PART_SUM, src/ratings.js): Wandsworth and
+   Guildfordians 42, Egham and Merton 41, so every pin one of them plays in moved. SPREAD_OFF puts those four back at 40 (CLUB_RATED, the
+   CLUB_TUNE line), which gives every side in the game exactly as b8c634e had it (tools/ratings.mjs section 2b pins that), so their abilities
+   are the sole change. spreadProof(url, before, ok): a re-pinned tool run again in a child (offRun) with them back, giving its pin from
+   before the spread, `before`. In the rerated world only: with LOCAL rerate off Counties 5 is 43, a whole sum, and nothing moved. */
+export const SPREAD_OFF = '{"GDN":40,"WAN":40,"EGH":40,"MER":40}';
+export async function spreadProof(fileUrl, before, ok) {
+  if (!RERATE) return;
+  const r = await offRun(fileUrl, { LOCAL:'{}', CLUB_RATED:SPREAD_OFF });
+  ok(!r.fails.length && r.last === before, `with Counties 5 back at 40 (CLUB_RATED, the four spread sides at the floor: every side as b8c634e), as b8c634e (${r.last}, pinned ${before}${r.fails.length ? '; ' + r.fails.join('; ') : ''})`);
+}
 export const camStart = T.debug.settings().cam;   // the camera this boot opened on, before the line below
 T.debug.settings().cam = 0;                       // the tools write the stick in world directions, so they play on Top unless they ask for a behind view (camera.mjs does, with its own turn)
 if (T.debug.TUT_IDS) T.debug.settings().tut = T.debug.TUT_IDS.slice(); else T.debug.settings().duelSeen = T.debug.settings().kickSeen = true;   // the tools play as a player who has had the tutorial: no moment pauses, no first-time aid (tutorial.mjs empties it where it tests them); a GAME= snapshot from before the tutorial gets its old flags set the same way

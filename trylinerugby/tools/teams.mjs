@@ -35,7 +35,10 @@ const SUR = X.TEAM_LISTS.find(l => l.key === 'sur').teams, COUNTY_LISTS = X.TEAM
   ok(all.length === X.POOLS.reduce((a, p) => a + p.length, 0) - twice.length && X.POOLS.flat().every(t => all.includes(t)) && twice.map(t => t.id).join() === 'EFF,WAN,GDN,EGH,MER,MIT,FEL,ALD' && X.COUNTIES.includes(X.CLUBS[7]) && twice.every(t => SUR.includes(t)), `ALL_TEAMS is every list, each side once: Counties' sides, in Surrey and Counties, and Aldershot, in Surrey and Hampshire, one team each (${twice.map(t => t.id)})`);
   ok(X.NATIONS.filter(t => t.home).map(t => t.id).join() === 'ENG,IRE,SCO,WAL', 'the home nations are England, Ireland, Scotland and Wales');
   const R = ['pace', 'power', 'handling', 'kicking', 'stamina'];
-  ok(all.every(t => R.every(k => Number.isInteger(t[k]) && t[k] >= 1 && t[k] <= 5)), 'every rating is 1 to 5');
+  // re-pinned 16 Nov 2026 (1.9.3, the owner's "Spread by Table"): with the rerating, Counties 5's 42s and 41s carry a part point on Pace
+  // (Wandsworth and Guildfordians 1.75, Egham and Merton 1.5: PART_SUM, src/ratings.js); every other rating is whole, as before
+  const PART = RR ? { WAN:1.75, GDN:1.75, EGH:1.5, MER:1.5 } : {}, parted = all.filter(t => R.some(k => !Number.isInteger(t[k]))).map(t => t.id).sort().join();
+  ok(all.every(t => R.every(k => t[k] >= 1 && t[k] <= 5 && (Number.isInteger(t[k]) || (k === 'pace' && PART[t.id] === t[k])))) && parted === Object.keys(PART).sort().join(), `every rating is 1 to 5, and whole but Counties 5's part points (${parted || 'none'})`);
   const top = Math.max(...clubs.map(t => R.reduce((a, k) => a + t[k], 0)));
   ok(top <= 5 + X.BUDGET, `no club is stronger than a team you can make (${top} v ${5 + X.BUDGET})`);   // a team with no level; PR #14's levels go to 90 (European Champions), and where they sit against main's club band is the teams builder's (README, integration list)
   ok(all.every(t => /^#[0-9a-f]{6}$/i.test(t.kit) && /^#[0-9a-f]{6}$/i.test(t.trim)), 'every kit colour is a hex');
@@ -609,9 +612,12 @@ function settle(pick) {
   ok(X.ENGLAND_TWO.every(t => total(t) === (t.w > t.l ? 13 : 12)) && Math.max(...e2) < lo(tops) && Math.min(...e2) >= hi(X.SCOTLAND), `England 2: 64 with a winning record, 61 without (PR #14's own), under every top-flight side and none under Scotland's best`);
   ok(tops.filter(t => total(t) === 17).map(t => t.id).join() === 'NTH,TLS,DUB,HMN,WLG,SAI,KOB', 'only a national champion reaches 75 where there are figures (Northampton, Toulouse, Dublin); New Zealand and Japan, with none, keep main\'s');
   // Local from its table, PR #14's ladder a step up: Farnham 61 (the owner's 61 to 64), Quins (no figures) level with him, as main had them
-  ok(X.CLUBS.map(total).join() === (RR ? '11,6,8,6,8,11,8,5,9,6,7,10' : '12,7,9,7,9,12,9,6,10,7,8,11') && X.overallOf(X.CLUBS[0]) === (RR ? 58 : 61) && total(X.CLUBS[0]) === hi(X.CLUBS) && total(X.CLUBS[5]) === total(X.CLUBS[0]), `Local from its table: Farnham 61, the top of Local, Quins level with him (${X.CLUBS.map(t => t.id + ' ' + total(t)).join(', ')})`);
+  // re-pinned 16 Nov 2026 (1.9.3): Guildfordians (eighth) 5.75, 42, Counties 5 spread by its table (was 5, 40); only its abilities moved (tools/ratings.mjs, section 2b)
+  ok(X.CLUBS.map(total).join() === (RR ? '11,6,8,6,8,11,8,5.75,9,6,7,10' : '12,7,9,7,9,12,9,6,10,7,8,11') && X.overallOf(X.CLUBS[0]) === (RR ? 58 : 61) && total(X.CLUBS[0]) === hi(X.CLUBS) && total(X.CLUBS[5]) === total(X.CLUBS[0]), `Local from its table: Farnham 61, the top of Local, Quins level with him (${X.CLUBS.map(t => t.id + ' ' + total(t)).join(', ')})`);
   ok(hi(local) <= Math.min(...e2) && hi(local) < lo(tops) && local.filter(t => total(t) === hi(local)).map(t => t.id).join() === 'FAR,QUI' && hi(local) === Math.min(...e2) - (RR ? 1 : 0), `no Local or Counties side above any England 2 side: Farnham and Quins ${RR ? 'a step under' : 'level with'} England 2's foot (61), every other one under them (${hi(local)} v ${Math.min(...e2)})`);
-  ok(X.COUNTIES.every(t => total(t) === (/Counties 3/.test(t.league) ? 7 : 6) - (RR ? 1 : 0)) && Math.min(...all.map(total)) === (RR ? 5 : 6), `Counties: Counties 3 at ${RR ? 43 : 46}, Counties 5 at ${RR ? 40 : 43}, the foot of the ladder, and nothing under it`);
+  // re-pinned 16 Nov 2026 (1.9.3, the owner's "Spread by Table"): with the rerating Counties 5 is 42, 41 and 40 by place (sums 5.75, 5.5 and 5:
+  // PART_SUM), was 40 for all six; only their abilities moved (tools/ratings.mjs, section 2b)
+  ok((RR ? X.COUNTIES.map(total).join() === '6,5.75,5.75,5.5,5.5,5,5' : X.COUNTIES.every(t => total(t) === (/Counties 3/.test(t.league) ? 7 : 6))) && Math.min(...all.map(total)) === (RR ? 5 : 6), `Counties: Counties 3 at ${RR ? 43 : 46}, Counties 5 at ${RR ? '42 to 40 by its table' : 43}, the foot of the ladder, and nothing under it (${X.COUNTIES.map(t => t.id + ' ' + total(t)).join(', ')})`);
   ok(avg(X.SCOTLAND) < avg(others) && X.SCOTLAND.every(t => total(t) <= 5 + X.BUDGET) && X.SCOTLAND.every((t, i) => i === 0 || total(t) <= total(X.SCOTLAND[i - 1])) && total(X.SCOTLAND[0]) > total(X.SCOTLAND[9]), `Scotland's amateur sides rate a little below the professional leagues (${avg(X.SCOTLAND).toFixed(1)} v ${avg(others).toFixed(1)}), the table's leaders highest`);
   ok(X.AUSTRALIA.map(t => t.id).join() === 'SYD,BRI,CAN,PTH,MEL,ADL' && X.SOUTH_AFRICA.length === 7 && X.FRANCE.length === 14, 'Australia, South Africa and France as they were (append only: saved careers name their sides)');
   // the owner's trademark rule: a city or a region, never a club's registered name or nickname (Quins in Local is the one exception)
@@ -847,7 +853,9 @@ function settle(pick) {
     EFF:46, WAN:43, EGH:43, MER:43, MIT:43, FEL:43,
   };
   // the owner's rerating: the game's Local and Counties sides a step down (src/ratings.js, LOCAL_STEPPED)
-  if (RR) Object.assign(TABLE, { FAR:58, QUI:58, WIM:55, IRO:52, GUI:49, COB:49, WEY:49, ORU:46, KIN:43, HAS:43, ALD:43, GDN:40, EFF:43, WAN:40, EGH:40, MER:40, MIT:40, FEL:40 });
+  // re-pinned 16 Nov 2026 (1.9.3, the owner's "Spread by Table"): Counties 5 by last season's place, Wandsworth and Guildfordians 42, Egham and
+  // Merton 41, Mitcham and Feltham 40, by part sums (PART_SUM, src/ratings.js); only their abilities moved (tools/ratings.mjs, section 2b)
+  if (RR) Object.assign(TABLE, { FAR:58, QUI:58, WIM:55, IRO:52, GUI:49, COB:49, WEY:49, ORU:46, KIN:43, HAS:43, ALD:43, GDN:42, EFF:43, WAN:42, EGH:41, MER:41, MIT:40, FEL:40 });
   const sorted = o => JSON.stringify(Object.entries(o).sort());
   ok(sorted(R5.CLUB_RATED) === sorted(TABLE), 'the clubs\' table is the one pinned here');
   const wrong = Object.entries(TABLE).filter(([id, ov]) => !by(id) || X.overallOf(by(id)) !== ov).map(([id, ov]) => `${id} ${by(id) && X.overallOf(by(id))} not ${ov}`);
@@ -870,7 +878,7 @@ function settle(pick) {
     const outB = spawnSync(process.execPath, ['--input-type=module', '-e', code], { env:{ ...process.env, CLUB_RATED:'band' }, encoding:'utf8' });
     const band = JSON.parse(outB.stdout.trim().split('\n').pop() || '{}'), ovB = id => X.overallOf(Object.fromEntries(K.map((k, i) => [k, +band[id][i]])));
     ok(X.CLUBS.map(t => sum(band[t.id])).join() === '17,13,15,13,15,17,15,12,16,13,14,16' && X.ENGLAND_TWO.map(t => ovB(t.id)).join() === '67,67,67,67,67,67,67,67,64,64,64,64,64' && X.SCOTLAND.map(t => sum(band[t.id])).join() === '13,13,13,13,13,12,12,12,12,12' && X.COUNTIES.map(t => ovB(t.id)).join() === '64,61,61,61,61,61,61' && X.ENGLAND.every(t => band[t.id] === ab(t)), `CLUB_RATED=band gives the band's table exactly: Farnham 75, England 2 67 and 64, Scotland and Quins as written, the top flights as now (${X.CLUBS.map(t => sum(band[t.id]))})`);
-    const fromFlavour = all.filter(t => t.id in TABLE).filter(t => ab(R5.abilitiesFor(Object.fromEntries(K.map((k, i) => [k, +off[t.id][i]])), R5.sumOfOverall(TABLE[t.id]))) !== ab(t)).map(t => t.id);
+    const fromFlavour = all.filter(t => t.id in TABLE).filter(t => ab(R5.abilitiesFor(Object.fromEntries(K.map((k, i) => [k, +off[t.id][i]])), R5.sumOfRated(TABLE[t.id]))) !== ab(t)).map(t => t.id);   // its table's sum: the whole one, or Counties 5's part sum for 41 and 42 (1.9.3)
     const fromLocal = [...NEW].filter(t => ab(R5.abilitiesFor(Object.fromEntries(K.map((k, i) => [k, +off[t.id][i]])), R5.sumOfOverall(T.local.LOCAL_RATED[t.id]))) !== ab(t)).map(t => t.id);   // CLUB_RATED=off clears the county clubs' ratings too
     ok(!fromFlavour.length && !fromLocal.length && own.filter(t => !(t.id in TABLE)).every(t => off[t.id] === ab(t)), `each rated side is abilitiesFor its list's own abilities (how it plays) at its table's sum, every other side exactly as written (${[...fromFlavour, ...fromLocal].join() || 'all'})`);
   }

@@ -73,7 +73,12 @@ pending('1. PR #14\'s own table, its club cap of 75 with Bordeaux at 90 and its 
     // re-pinned again for the owner's rerating (LOCAL, 14 Nov 2026: Regional 1 and every level under it a step down, PR #14's own 40 to 58 again)
     ok(row === (RERATE ? 'c5:Counties 5:40:1:0,c3:Counties 3:43:2:1,c1:Counties 1:49:2.5:3,r2:Regional 2:52:2.5:4,r1:Regional 1:58:3:6' : 'c5:Counties 5:43:2:1,c3:Counties 3:46:2:2,c1:Counties 1:52:2.5:4,r2:Regional 2:55:3:5,r1:Regional 1:61:3.5:7') + ',nat:Championship:64:3.5:8,top:Top Flight:72:4:11,champ:National Champions:75:4.5:12', `the level table (${row})`);
     const best = re => Math.max(...X.ALL_TEAMS.filter(t => re.test(t.league || '')).map(X.overallOf));
-    ok([[/Counties 5/, 'c5'], [/Counties 3/, 'c3'], [/Counties 1/, 'c1'], [/Regional 2/, 'r2'], [/Regional 1/, 'r1'], [/English Championship/, 'nat']].every(([re, id]) => best(re) === R.TEAM_LEVELS.find(l => l.id === id).overall) && R.TEAM_LEVELS.find(l => l.id === 'champ').overall === Math.max(...X.ALL_TEAMS.filter(t => !X.isNation(t)).map(X.overallOf)), 'each level is the best built-in side of its league, National Champions the best club');
+    // re-pinned 16 Nov 2026 (1.9.3, the owner's "Spread by Table"): Counties 5's own sides are 42 to 40 by part points (PART_SUM), which a level
+    // cannot spend, and he kept a made Counties 5 team at 40, so that level is its league's foot, not its best; every other level as before
+    // (with LOCAL rerate off Counties 5 is all 43, its best and its foot). The six's abilities are the only change: section 2b's proof
+    const foot = re => Math.min(...X.ALL_TEAMS.filter(t => re.test(t.league || '')).map(X.overallOf));
+    ok([[/Counties 3/, 'c3'], [/Counties 1/, 'c1'], [/Regional 2/, 'r2'], [/Regional 1/, 'r1'], [/English Championship/, 'nat']].every(([re, id]) => best(re) === R.TEAM_LEVELS.find(l => l.id === id).overall) && R.TEAM_LEVELS.find(l => l.id === 'champ').overall === Math.max(...X.ALL_TEAMS.filter(t => !X.isNation(t)).map(X.overallOf))
+      && foot(/Counties 5/) === R.TEAM_LEVELS.find(l => l.id === 'c5').overall && best(/Counties 5/) === (RERATE ? 42 : 43), 'each level is the best built-in side of its league, National Champions the best club; Counties 5 its foot, under its 42s');
     ok(R.TEAM_LEVELS.every(l => R.starsOfOverall(l.overall) === l.stars && R.abilitiesFor({}, 5 + l.budget) && X.overallOf(R.abilitiesFor({}, 5 + l.budget)) === l.overall), 'a level spent in full is its own overall and stars');
     ok(R.TEAM_LEVELS.find(l => l.id === 'champ').budget === X.BUDGET, 'and the old budget of 12 is the National Champions level');
   }
@@ -102,11 +107,12 @@ pending('1. PR #14\'s own table, its club cap of 75 with Bordeaux at 90 and its 
   ok(Math.max(...X.allNations().map(X.overallOf)) === 96, 'nations may go above it, and South Africa is 96');
   });
   // PR #14's English bands, live in main's lists since the real order (2026-11-09): England 2 64 or 61, and each level of the English game
-  // starts where the last stops, Counties 5 up to the Premiership
+  // starts where the last stops, Counties 5 up to the Premiership. Re-pinned 16 Nov 2026 (1.9.3): Counties 5 40-42 (was 40-40), its six spread
+  // by their table, still under Counties 3's 43; only their abilities moved (section 2b's proof)
   ok(X.ENGLAND_TWO.every(t => X.overallOf(t) === (t.w > t.l ? 64 : 61)), 'England 2 is 64 with a winning record, else 61, between Regional 1 and the top flight');
   { const band = re => X.ALL_TEAMS.filter(t => re.test(t.league || '')).map(X.overallOf), span = re => [Math.min(...band(re)), Math.max(...band(re))];
     const steps = [/Counties 5/, /Counties 3/, /Counties 1/, /Regional 2/, /Regional 1/, /English Championship/, /English Premiership/].map(span);
-    ok(steps.every((v, i) => !i || v[0] >= steps[i - 1][1]) && steps.map(v => v.join('-')).join() === (RERATE ? '40-40,43-43,46-49,49-52,55-58,61-64,67-75' : '43-43,46-46,49-52,52-55,58-61,61-64,67-75'), `each level of the English game starts where the last stops (${steps.map(v => v.join('-')).join(', ')})`);
+    ok(steps.every((v, i) => !i || v[0] >= steps[i - 1][1]) && steps.map(v => v.join('-')).join() === (RERATE ? '40-42,43-43,46-49,49-52,55-58,61-64,67-75' : '43-43,46-46,49-52,52-55,58-61,61-64,67-75'), `each level of the English game starts where the last stops (${steps.map(v => v.join('-')).join(', ')})`);
     // the owner's rerating: National League between Regional 1 and the Championship, 1 over 2 (National League 2 58 or 61, 1 all 61)
     if (RERATE) { const nl = [/^Regional 1/, /^National League 2/, /^National League 1/, /English Championship/].map(span);
       ok(nl.every((v, i) => !i || v[0] >= nl[i - 1][1]) && nl.map(v => v.join('-')).join() === '55-58,58-61,61-61,61-64', `and National League 2 then 1 sit between Regional 1 and the Championship (${nl.map(v => v.join('-')).join(', ')})`); } }
@@ -157,6 +163,46 @@ pending('1. PR #14\'s own table, its club cap of 75 with Bordeaux at 90 and its 
   ok(top('FAR', 'pace') && top('EXE', 'power') && top('BRS', 'pace') && top('DUB', 'handling'), 'and so do the clubs');
   ok(X.overallOf(by('RSA')) === 96 && R.sumOfOverall(96) === 24 && R.sumOfOverall(43) === 6 && R.sumOfOverall(75) === 17, 'overallOf, the other way');
   });
+}
+
+// 2b. Counties 5 Surrey spread by last season's table (the owner, 16 Nov 2026, "Spread by Table", 1.9.3): Wandsworth (3rd) and Guildfordians
+//     (4th) 42, Egham (5th) and Merton (6th) 41, Mitcham (7th) and Feltham (10th) 40. Whole abilities give 40 and 43 and nothing between, so
+//     42 and 41 are part sums (PART_SUM, src/ratings.js): 5.75 (overall 42.21) and 5.5 (41.475), the part on the ability abilitiesFor gives
+//     the next point to. With LOCAL rerate off Counties 5 is 43, a whole sum, so this is the rerated world's.
+if (RERATE) {
+  const six = ['WAN', 'GDN', 'EGH', 'MER', 'MIT', 'FEL'], ab = t => KEYS.map(k => t[k]).join(','), json = v => JSON.stringify(v);
+  const FLAVOUR = { WAN:[3, 3, 3, 3, 3], GDN:[3, 3, 3, 2, 2], EGH:[3, 3, 3, 2, 3], MER:[3, 3, 2, 3, 3], MIT:[3, 2, 3, 3, 3], FEL:[3, 3, 3, 2, 2] };   // as written in src/data.js: how each plays
+  const flav = id => Object.fromEntries(KEYS.map((k, i) => [k, FLAVOUR[id][i]]));
+  ok(six.map(id => ab(by(id))).join(' ') === '1.75,1,1,1,1 1.75,1,1,1,1 1.5,1,1,1,1 1.5,1,1,1,1 1,1,1,1,1 1,1,1,1,1', `the six: Pace 1.75 for 42, 1.5 for 41, the rest 1 (${six.map(id => id + ' ' + ab(by(id))).join('; ')})`);
+  ok(six.map(id => sumOf(by(id))).join() === '5.75,5.75,5.5,5.5,5,5' && six.map(id => X.overallOf(by(id))).join() === '42,42,41,41,40,40' && six.every(id => R.starsOf(by(id)) === 1) && six.map(id => R.CLUB_RATED[id]).join() === '42,42,41,41,40,40', `sums 5.75, 5.5 and 5; overall 42, 41 and 40, one star each (ratedStars), and the clubs' table says so (${six.map(id => id + ' ' + X.overallOf(by(id))).join(', ')})`);
+  ok(six.every((id, i) => !i || by(six[i - 1]).place < by(id).place) && six.every((id, i) => !i || X.overallOf(by(six[i - 1])) >= X.overallOf(by(id))), 'in last season\'s table order, never under a side it finished above (3rd, 4th, 5th, 6th, 7th, 10th)');
+  ok(six.every(id => ab(R.abilitiesFor(flav(id), R.sumOfRated(R.CLUB_RATED[id]))) === ab(by(id))) && six.every(id => { const a5 = R.abilitiesFor(flav(id), 5), a6 = R.abilitiesFor(flav(id), 6); return KEYS.filter(k => a5[k] !== a6[k]).join() === 'pace'; }), 'each is abilitiesFor its own flavour at its part sum, and the part is on Pace, where its next whole point goes (the strongest still below 5), no random draw');
+  ok(json(R.abilitiesFor({ pace:2, power:2, handling:2, kicking:2, stamina:2 }, 10.5)) === json({ pace:2.5, power:2, handling:2, kicking:2, stamina:2 }) && json(R.abilitiesFor({ pace:3, power:3, handling:4, kicking:2, stamina:3 }, 13.5)) === json({ pace:3, power:3, handling:4, kicking:1, stamina:2.5 }) && json(R.abilitiesFor({ pace:5, power:5, handling:5, kicking:5, stamina:4 }, 24.5)) === json({ pace:5, power:5, handling:5, kicking:5, stamina:4.5 }), 'a part sum is the whole sum\'s abilities and the part where the next whole point would go: on the strongest when adding, back on the last taken off when taking off, past an ability at 5');
+  ok(json(R.PART_SUM) === '{"41":5.5,"42":5.75}' && [...Array(60).keys()].map(i => 40 + i).every(ov => (ov === 41 || ov === 42) || R.sumOfRated(ov) === R.sumOfOverall(ov)) && R.sumOfOverall(41) === 5 && R.sumOfOverall(42) === 6 && R.sumOfOverall(64) === 13, 'part sums only for 41 and 42, under 43: every other overall\'s sum is the whole one it was (64 still 13, not 8.14 rounded to 8.25 above 5), and sumOfOverall itself is unchanged');
+  const c5 = R.TEAM_LEVELS.find(l => l.id === 'c5');
+  ok(c5.overall === 40 && c5.budget === 0 && c5.stars === 1, 'a made or imported Counties 5 team stays 40, no points to spend (TEAM_LEVELS)');
+  const day = R.BUNDLED.date, at = Date.parse(day + 'T00:00:00Z'), table = ov => R.clean({ ...R.BUNDLED, men:{ ...R.BUNDLED.men, ROU:ov } }, at);
+  ok(table(41) === null && table(42) === null && table(43) && table(43).men.ROU === 43, 'ratings.json still takes only an overall a whole sum gives (ratingsTable): a nation at 41 or 42 is refused');
+  // saves keep whole pips (cleanSide); the part is put back only where the side holds exactly its club's own part now
+  const wan = by('WAN');
+  ok(X.cleanSide(JSON.parse(json(wan))).pace === 1.75 && X.overallOf(X.cleanSide(JSON.parse(json(wan)))) === 42 && X.cleanSide(JSON.parse(json(by('EGH')))).pace === 1.5, 'a side saved at its part point reads as saved: Wandsworth 42, Egham 41');
+  ok(X.cleanSide({ ...wan, pace:1 }).pace === 1 && X.cleanSide({ ...wan, pace:2 }).pace === 2 && X.cleanSide({ ...wan, pace:1.5 }).pace === 2 && X.cleanSide({ ...wan, pace:1.75, custom:true }).pace === 2 && X.cleanSide({ ...wan, pace:1.75, key:'lg-WAN' }).pace === 2 && X.cleanSide({ id:'ABC', name:'Side', stamina:3.6 }).stamina === 4, 'one saved before keeps its whole pips (40, or 43 from 8089294), any other part is rounded, and a made or My League side is whole');
+  { const was = X.champ(); X.newChamp(by('WAN'), ['GDN', 'EGH', 'MER', 'MIT', 'FEL'].map(by)); const saved = JSON.parse(JSON.stringify(X.champ())), back = X.cleanChamp(saved);
+    ok(json(back.teams.map(t => X.overallOf(t))) === json(saved.teams.map(t => X.overallOf(t))) && back.teams.map(ab).join(' ') === saved.teams.map(ab).join(' ') && back.teams[0].pace === 1.75, `a championship saved with them loads with them (${back.teams.map(t => t.id + ' ' + X.overallOf(t)).join(', ')})`);
+    const old = { ...saved, teams:saved.teams.map(t => ({ ...t, pace:1 })) };
+    ok(X.cleanChamp(old).teams.every(t => X.overallOf(t) === 40), 'and one saved before (every ability 1) keeps its sides as saved, as every rerating has');
+    X.setChamp(was); }
+  { const cr = C.create({ pos:'B', num:4, club:wan }), back = C.clean(JSON.parse(JSON.stringify({ ...cr, club:{ ...cr.club, pace:1 } })));
+    ok(cr.club.pace === 1.75 && back && back.club.pace === 1.75 && X.overallOf(back.club) === 42, `a career at Wandsworth plays it at 42, its list's part point, whatever it was saved at (careerRated: ${back && ab(back.club)})`); }
+  ok(ab(R.abilitiesFor(Object.fromEntries(KEYS.map(k => [k, wan[k]])), sumOf(wan) + 1)) === '2.75,1,1,1,1' && ab(R.abilitiesFor(Object.fromEntries(KEYS.map(k => [k, wan[k]])), sumOf(wan) - 1)) === '1,1,1,1,1', 'its Form moves it by the boost, the part kept: 42 and +1 is 6.75 (Pace 2.75), and -1 holds it at the floor (realSide)');
+  // the proof: with the four put back at 40 (CLUB_RATED, tools/harness.mjs) every side in the game is b8c634e's exactly, so the six's abilities are the sole change
+  { const { spawnSync } = await import('node:child_process');
+    const code = `const { T } = await import(${json(new URL('./harness.mjs', import.meta.url).href)}); const X = T.teams, K = ${json(KEYS)}; const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h >>> 0).toString(36); }; const rows = [...X.ALL_TEAMS, ...['men', 'women', 'minis'].flatMap(c => X.natList(c))].map(t => t.id + ':' + K.map(k => t[k]).join(',')); console.log(fnv(rows.join(' ')) + ' ' + rows.length + ' ' + JSON.stringify(Object.fromEntries(rows.map(r => r.split(':')))));`;
+    const run = env => { const o = spawnSync(process.execPath, ['--input-type=module', '-e', code], { env:{ ...process.env, ...env }, encoding:'utf8', maxBuffer:64*1024*1024 }); const l = (o.stdout || '').trim().split('\n').pop() || ''; const [fp, n, ...rest] = l.split(' '); return { fp, n:+n, rows:JSON.parse(rest.join(' ') || '{}') }; };
+    const back = run({ CLUB_RATED:'{"GDN":40,"WAN":40,"EGH":40,"MER":40}' }), now = run({});
+    const moved = Object.keys(now.rows).filter(id => now.rows[id] !== back.rows[id]);
+    ok(back.fp === 'aqqey4' && back.n === 605, `with the four back at 40 every side is b8c634e's exactly (${back.fp} ${back.n}, pinned aqqey4 605, GAME=<b8c634e's index.html> gives the same)`);
+    ok(moved.sort().join() === 'EGH,GDN,MER,WAN' && now.fp !== back.fp, `and with them spread only those four move (${moved.join()})`); }
 }
 
 // 3. the league lines: real figures, read from the list

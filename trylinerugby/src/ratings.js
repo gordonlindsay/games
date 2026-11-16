@@ -6,7 +6,8 @@
      the nations themselves are rated by main's official World Rugby tables (NATIONS, NAT_WOMEN, natList in data.js).
    - CLUB_RATED is the clubs' table: PR #14's ratings from last season's results (place, scored and conceded), in the real order of the tiers.
    - starsOfOverall and TEAM_LEVELS are the star scale and the levels a team you make can be set at.
-   - abilitiesFor turns a side's flavour (how it plays: the abilities written in its list) and a target sum into whole abilities.
+   - abilitiesFor turns a side's flavour (how it plays: the abilities written in its list) and a target sum into whole abilities, and a part
+     sum (Counties 5's 41 and 42: PART_SUM) into whole abilities and one part point.
    - Players' devices only ever ask the game's own site: a same-origin ratings.json, read once at boot (online, or offline through
      the service worker's copy), checked strictly here, and used for picks made afterwards. Saved championships and careers keep the sides they were saved with.
    ========================================================= */
@@ -26,7 +27,9 @@ const starsWords = n => n + (n === 1 ? ' Star' : ' Stars');   // the text altern
    The id is what a save holds, so it never changes ('nat' was named National League until 2026-11-09). A saved team with no level keeps BUDGET, so an old save reads as it did: teamBudget.
    LOCAL (src/data.js; the owner, 14 Nov 2026: "rerate the lower clubs - farnham shouldnt be as high as they are"): Regional 1 and every
    level under it one step down the scale, as the clubs are (CLUB_RATED below): Counties 5 40, Counties 3 43, Counties 1 49, Regional 2 52,
-   Regional 1 58 (Farnham). 40 is the scale's floor (a sum of 5, every ability 1), so Counties 5 takes it, with no points to spend. */
+   Regional 1 58 (Farnham). 40 is the scale's floor (a sum of 5, every ability 1), so Counties 5 takes it, with no points to spend.
+   Counties 5's own sides are spread 42 to 40 by their table since 1.9.3 (PART_SUM, below) by part points, which a level cannot spend,
+   so the level stays 40, its foot, not its best: a made or imported Counties 5 team is as it was. */
 const LOCAL_RERATE = LOCAL.on && LOCAL.rerate;   // LOCAL='{"rerate":false}' (tools/harness.mjs): 8089294's ratings, the proof behind the rerating's re-pins
 const TEAM_LEVELS = [...(LOCAL_RERATE ? [['c5', 'Counties 5', 40], ['c3', 'Counties 3', 43], ['c1', 'Counties 1', 49], ['r2', 'Regional 2', 52], ['r1', 'Regional 1', 58]]
   : [['c5', 'Counties 5', 43], ['c3', 'Counties 3', 46], ['c1', 'Counties 1', 52], ['r2', 'Regional 2', 55], ['r1', 'Regional 1', 61]]), ['nat', 'Championship', 64], ['top', 'Top Flight', 72], ['champ', 'National Champions', 75]]
@@ -39,8 +42,16 @@ const teamBudget = t => { const l = teamLevelOf(t); return l ? l.budget : BUDGET
    strong; over it, a point comes off where it is weakest. Each ability takes its turn, strongest (or weakest) first, so
    an ability that started ahead of another is never behind it after. Pace and Power count one point up for that order: in play
    they matter most, so two sides with one overall should not differ only in having spent it there. Ties go by ABILITIES order, the
-   other way round when taking off, so the same flavour always gives the same side. */
+   other way round when taking off, so the same flavour always gives the same side.
+   A sum that is not whole (PART_SUM, below: Counties 5's 41 and 42, the only ones the game rates so) is its whole part, as above, and the
+   rest of a point on the ability this order gives the next whole point to (the strongest still below 5), as Form's half point is put
+   (realSide, src/results.js). No random draw. A whole sum gives whole abilities exactly as it always has. */
 function abilitiesFor(flavour, sum) {
+  const n = ABILITIES.length, s = clamp(sum, n, 5*n), whole = Math.floor(s), part = s - whole, out = abilitiesWhole(flavour, whole);
+  if (part) { const next = abilitiesWhole(flavour, whole + 1), k = ABILITIES.map(([x]) => x).find(x => next[x] !== out[x]); if (k) out[k] += part; }
+  return out;
+}
+function abilitiesWhole(flavour, sum) {
   const keys = ABILITIES.map(([k]) => k), n = keys.length, out = {};
   let left = clamp(Math.round(sum), n, 5*n);
   for (const k of keys) { out[k] = clamp(Math.round(abilityOf(flavour, k)) || 1, 1, 5); left -= out[k]; }
@@ -83,9 +94,20 @@ const CLUB_RATED = {
 /* LOCAL: the game's own Local and Counties sides one step down the scale (every step under 64 is 3), each league's place rule kept, so the
    new clubs' ladder (LOCAL_BAND) gives the game's own seven exactly as before: Regional 1 58 to 55 (Farnham 58, Wimbledon 55), Regional 2
    52 to 49 (Ironsides 52, Guildford 49), Counties 1 49 to 46 (Cobham and Weybridge 49, Old Ruts 46), Counties 3 43, Counties 5 40, the
-   scale's floor (a sum of 5: every ability 1). Quins stays level with Farnham, 58. Before CLUB_TUNE, so CLUB_RATED=off and =band act as ever. */
-const LOCAL_STEPPED = { FAR:58, QUI:58, WIM:55, IRO:52, GUI:49, COB:49, WEY:49, ORU:46, KIN:43, HAS:43, ALD:43, GDN:40, EFF:43, WAN:40, EGH:40, MER:40, MIT:40, FEL:40 };
+   scale's floor (a sum of 5: every ability 1), since 1.9.3 spread 42 to 40 by its table (PART_SUM, below). Quins stays level with Farnham, 58. Before CLUB_TUNE, so CLUB_RATED=off and =band act as ever. */
+const LOCAL_STEPPED = { FAR:58, QUI:58, WIM:55, IRO:52, GUI:49, COB:49, WEY:49, ORU:46, KIN:43, HAS:43, ALD:43, GDN:42, EFF:43, WAN:42, EGH:41, MER:41, MIT:40, FEL:40 };
 if (LOCAL_RERATE) Object.assign(CLUB_RATED, LOCAL_STEPPED);
+/* Counties 5 Surrey spread by last season's table (the owner, 16 Nov 2026, "Spread by Table", 42, 41 and 40 by place): Wandsworth (3rd)
+   and Guildfordians (4th) 42, Egham (5th) and Merton (6th) 41, Mitcham (7th) and Feltham (10th) 40, the floor (LOCAL_STEPPED, above).
+   Whole abilities give 40, 43 and 46 down here and nothing between (a sum of 5 is 40, 6 is 43: overallOf, sumOfOverall), and he chose,
+   told so, part points: 42 is three quarters of a point above the floor (a sum of 5.75, overall 42.21, shown 42), 41 a half (5.5,
+   41.475, shown 41), each on the ability abilitiesFor gives the next point to. Part sums only under 43, where no whole sum reaches, so no
+   other side moves: sumOfOverall still gives every whole sum (a quarter step everywhere would move 64, whose 8.14 would round to 8.25),
+   TEAM_LEVELS keeps Counties 5 at 40 with no points to spend, and ratings.json's nations still take only an overall a whole sum gives
+   (ratingsTable). CLUB_RATED='{"GDN":40,"WAN":40,"EGH":40,"MER":40}' (tools/harness.mjs) puts the four back at the floor: the proof
+   behind this spread's re-pins. LOCAL rerate off has Counties 5 at 43, a whole sum, as 8089294 had it. */
+const PART_SUM = { 41:5.5, 42:5.75 };
+const sumOfRated = ov => PART_SUM[ov] ?? sumOfOverall(ov);   // a rated side's ability sum: a whole one, or Counties 5's part sum
 /* The new Local clubs (LOCAL, src/data.js) are rated from their league and place by the rule the game's own clubs already follow, which the
    seven of them with a line from Regional 1 to Counties 1 give exactly (Farnham 7th of 12 58, Wimbledon 9th 55, Ironsides 6th of 12 52,
    Guildford 10th 49, Cobham and Weybridge 1st and 2nd of 11 49, Old Ruts 7th 46: LOCAL_STEPPED): the top of its league's band in the top
@@ -104,7 +126,7 @@ function localRated(t) {                           // a club's overall from its 
 const LOCAL_RATED = {};
 for (const t of LOCAL_NEW) LOCAL_RATED[t.id] = localRated(t);
 // CLUB_TUNE
-for (const t of ALL_TEAMS) { const ov = CLUB_RATED[t.id] ?? LOCAL_RATED[t.id]; if (ov != null) Object.assign(t, abilitiesFor(TEAM_FLAVOUR.get(t.id), sumOfOverall(ov))); }
+for (const t of ALL_TEAMS) { const ov = CLUB_RATED[t.id] ?? LOCAL_RATED[t.id]; if (ov != null) Object.assign(t, abilitiesFor(TEAM_FLAVOUR.get(t.id), sumOfRated(ov))); }
 
 /* ---------- ratings.json ---------- */
 let ratingsNow = RATINGS_BUNDLED, ratingsWaiting = null;   // waiting: checked and fetched, not yet used, so no pick under way changes under anyone
