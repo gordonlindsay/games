@@ -5,7 +5,7 @@ let practice = null;
 /* The game's own version, small at the foot of Settings and on window.__tryline (the owner, 2026-11-11: "bump GAME_VERSION to 1.2", on
    top of main's 1.1 from PR #17, which showed it after the home's tagline; the tidied home has no tagline, so Settings is its one place).
    The app's store version (app/package.json, 1.0.0) is the app's, and apart from this. */
-const GAME_VERSION = '1.9.2';
+const GAME_VERSION = '1.9.3';
 
 /* =========================================================
    Data
@@ -165,7 +165,8 @@ const ENGLAND_TWO = [
 ];
 /* The foot of the game, from PR #14: Counties 5 Surrey, the league Guildfordians play in, in last season's table order, with one side from
    Counties 3 Surrey above them. Guildfordians is the Local list's own object, so it stays one team with one code (ALL_TEAMS keeps it once).
-   Rated 43 for Counties 5 and 46 for Counties 3, the foot of the ladder, as Local's own Counties sides are (CLUB_RATED). Weak sources, as
+   Rated 43 for Counties 5 and 46 for Counties 3, the foot of the ladder, as Local's own Counties sides are (CLUB_RATED); with LOCAL's
+   rerating 40 and 43, and since 1.9.3 Counties 5 spread by its table, 42, 41 and 40 (PART_SUM, src/ratings.js). Weak sources, as
    PR #14 flagged them: Egham's and Mitcham's colours could not be sourced and are a free choice. Append only, never reorder. */
 const COUNTIES = [
   { id:'EFF', name:'Effingham',  kit:'#f2b01e', trim:'#0f5a32', pace:3, power:3, handling:3, kicking:3, stamina:3, league:'Counties 3 Surrey', place:2, w:16, d:0, l:4, pf:773, pa:291 },
@@ -1202,7 +1203,8 @@ function kitClean(t, team) {
      the nations themselves are rated by main's official World Rugby tables (NATIONS, NAT_WOMEN, natList in data.js).
    - CLUB_RATED is the clubs' table: PR #14's ratings from last season's results (place, scored and conceded), in the real order of the tiers.
    - starsOfOverall and TEAM_LEVELS are the star scale and the levels a team you make can be set at.
-   - abilitiesFor turns a side's flavour (how it plays: the abilities written in its list) and a target sum into whole abilities.
+   - abilitiesFor turns a side's flavour (how it plays: the abilities written in its list) and a target sum into whole abilities, and a part
+     sum (Counties 5's 41 and 42: PART_SUM) into whole abilities and one part point.
    - Players' devices only ever ask the game's own site: a same-origin ratings.json, read once at boot (online, or offline through
      the service worker's copy), checked strictly here, and used for picks made afterwards. Saved championships and careers keep the sides they were saved with.
    ========================================================= */
@@ -1222,7 +1224,9 @@ const starsWords = n => n + (n === 1 ? ' Star' : ' Stars');   // the text altern
    The id is what a save holds, so it never changes ('nat' was named National League until 2026-11-09). A saved team with no level keeps BUDGET, so an old save reads as it did: teamBudget.
    LOCAL (src/data.js; the owner, 14 Nov 2026: "rerate the lower clubs - farnham shouldnt be as high as they are"): Regional 1 and every
    level under it one step down the scale, as the clubs are (CLUB_RATED below): Counties 5 40, Counties 3 43, Counties 1 49, Regional 2 52,
-   Regional 1 58 (Farnham). 40 is the scale's floor (a sum of 5, every ability 1), so Counties 5 takes it, with no points to spend. */
+   Regional 1 58 (Farnham). 40 is the scale's floor (a sum of 5, every ability 1), so Counties 5 takes it, with no points to spend.
+   Counties 5's own sides are spread 42 to 40 by their table since 1.9.3 (PART_SUM, below) by part points, which a level cannot spend,
+   so the level stays 40, its foot, not its best: a made or imported Counties 5 team is as it was. */
 const LOCAL_RERATE = LOCAL.on && LOCAL.rerate;   // LOCAL='{"rerate":false}' (tools/harness.mjs): 8089294's ratings, the proof behind the rerating's re-pins
 const TEAM_LEVELS = [...(LOCAL_RERATE ? [['c5', 'Counties 5', 40], ['c3', 'Counties 3', 43], ['c1', 'Counties 1', 49], ['r2', 'Regional 2', 52], ['r1', 'Regional 1', 58]]
   : [['c5', 'Counties 5', 43], ['c3', 'Counties 3', 46], ['c1', 'Counties 1', 52], ['r2', 'Regional 2', 55], ['r1', 'Regional 1', 61]]), ['nat', 'Championship', 64], ['top', 'Top Flight', 72], ['champ', 'National Champions', 75]]
@@ -1235,8 +1239,16 @@ const teamBudget = t => { const l = teamLevelOf(t); return l ? l.budget : BUDGET
    strong; over it, a point comes off where it is weakest. Each ability takes its turn, strongest (or weakest) first, so
    an ability that started ahead of another is never behind it after. Pace and Power count one point up for that order: in play
    they matter most, so two sides with one overall should not differ only in having spent it there. Ties go by ABILITIES order, the
-   other way round when taking off, so the same flavour always gives the same side. */
+   other way round when taking off, so the same flavour always gives the same side.
+   A sum that is not whole (PART_SUM, below: Counties 5's 41 and 42, the only ones the game rates so) is its whole part, as above, and the
+   rest of a point on the ability this order gives the next whole point to (the strongest still below 5), as Form's half point is put
+   (realSide, src/results.js). No random draw. A whole sum gives whole abilities exactly as it always has. */
 function abilitiesFor(flavour, sum) {
+  const n = ABILITIES.length, s = clamp(sum, n, 5*n), whole = Math.floor(s), part = s - whole, out = abilitiesWhole(flavour, whole);
+  if (part) { const next = abilitiesWhole(flavour, whole + 1), k = ABILITIES.map(([x]) => x).find(x => next[x] !== out[x]); if (k) out[k] += part; }
+  return out;
+}
+function abilitiesWhole(flavour, sum) {
   const keys = ABILITIES.map(([k]) => k), n = keys.length, out = {};
   let left = clamp(Math.round(sum), n, 5*n);
   for (const k of keys) { out[k] = clamp(Math.round(abilityOf(flavour, k)) || 1, 1, 5); left -= out[k]; }
@@ -1279,9 +1291,20 @@ const CLUB_RATED = {
 /* LOCAL: the game's own Local and Counties sides one step down the scale (every step under 64 is 3), each league's place rule kept, so the
    new clubs' ladder (LOCAL_BAND) gives the game's own seven exactly as before: Regional 1 58 to 55 (Farnham 58, Wimbledon 55), Regional 2
    52 to 49 (Ironsides 52, Guildford 49), Counties 1 49 to 46 (Cobham and Weybridge 49, Old Ruts 46), Counties 3 43, Counties 5 40, the
-   scale's floor (a sum of 5: every ability 1). Quins stays level with Farnham, 58. Before CLUB_TUNE, so CLUB_RATED=off and =band act as ever. */
-const LOCAL_STEPPED = { FAR:58, QUI:58, WIM:55, IRO:52, GUI:49, COB:49, WEY:49, ORU:46, KIN:43, HAS:43, ALD:43, GDN:40, EFF:43, WAN:40, EGH:40, MER:40, MIT:40, FEL:40 };
+   scale's floor (a sum of 5: every ability 1), since 1.9.3 spread 42 to 40 by its table (PART_SUM, below). Quins stays level with Farnham, 58. Before CLUB_TUNE, so CLUB_RATED=off and =band act as ever. */
+const LOCAL_STEPPED = { FAR:58, QUI:58, WIM:55, IRO:52, GUI:49, COB:49, WEY:49, ORU:46, KIN:43, HAS:43, ALD:43, GDN:42, EFF:43, WAN:42, EGH:41, MER:41, MIT:40, FEL:40 };
 if (LOCAL_RERATE) Object.assign(CLUB_RATED, LOCAL_STEPPED);
+/* Counties 5 Surrey spread by last season's table (the owner, 16 Nov 2026, "Spread by Table", 42, 41 and 40 by place): Wandsworth (3rd)
+   and Guildfordians (4th) 42, Egham (5th) and Merton (6th) 41, Mitcham (7th) and Feltham (10th) 40, the floor (LOCAL_STEPPED, above).
+   Whole abilities give 40, 43 and 46 down here and nothing between (a sum of 5 is 40, 6 is 43: overallOf, sumOfOverall), and he chose,
+   told so, part points: 42 is three quarters of a point above the floor (a sum of 5.75, overall 42.21, shown 42), 41 a half (5.5,
+   41.475, shown 41), each on the ability abilitiesFor gives the next point to. Part sums only under 43, where no whole sum reaches, so no
+   other side moves: sumOfOverall still gives every whole sum (a quarter step everywhere would move 64, whose 8.14 would round to 8.25),
+   TEAM_LEVELS keeps Counties 5 at 40 with no points to spend, and ratings.json's nations still take only an overall a whole sum gives
+   (ratingsTable). CLUB_RATED='{"GDN":40,"WAN":40,"EGH":40,"MER":40}' (tools/harness.mjs) puts the four back at the floor: the proof
+   behind this spread's re-pins. LOCAL rerate off has Counties 5 at 43, a whole sum, as 8089294 had it. */
+const PART_SUM = { 41:5.5, 42:5.75 };
+const sumOfRated = ov => PART_SUM[ov] ?? sumOfOverall(ov);   // a rated side's ability sum: a whole one, or Counties 5's part sum
 /* The new Local clubs (LOCAL, src/data.js) are rated from their league and place by the rule the game's own clubs already follow, which the
    seven of them with a line from Regional 1 to Counties 1 give exactly (Farnham 7th of 12 58, Wimbledon 9th 55, Ironsides 6th of 12 52,
    Guildford 10th 49, Cobham and Weybridge 1st and 2nd of 11 49, Old Ruts 7th 46: LOCAL_STEPPED): the top of its league's band in the top
@@ -1300,7 +1323,7 @@ function localRated(t) {                           // a club's overall from its 
 const LOCAL_RATED = {};
 for (const t of LOCAL_NEW) LOCAL_RATED[t.id] = localRated(t);
 // CLUB_TUNE
-for (const t of ALL_TEAMS) { const ov = CLUB_RATED[t.id] ?? LOCAL_RATED[t.id]; if (ov != null) Object.assign(t, abilitiesFor(TEAM_FLAVOUR.get(t.id), sumOfOverall(ov))); }
+for (const t of ALL_TEAMS) { const ov = CLUB_RATED[t.id] ?? LOCAL_RATED[t.id]; if (ov != null) Object.assign(t, abilitiesFor(TEAM_FLAVOUR.get(t.id), sumOfRated(ov))); }
 
 /* ---------- ratings.json ---------- */
 let ratingsNow = RATINGS_BUNDLED, ratingsWaiting = null;   // waiting: checked and fetched, not yet used, so no pick under way changes under anyone
@@ -1494,7 +1517,9 @@ function realDelta(t) {
    (abilitiesFor, src/ratings.js: no random draw, each ability 1 to 5), with the side as it is kept on the copy (realBase) for the star
    traits and Stronger Side. No boost: the side itself, so a match with none is exactly as before.
    +1.5 (the owner, 15 Nov 2026) is a whole point through abilitiesFor and a real half point on the ability abilitiesFor would give the next
-   whole point to (the strongest still below 5): abilitiesFor rounds its sum, so +1.5 handed to it whole would play as +2. The engine
+   whole point to (the strongest still below 5): abilitiesFor rounded its sum then, so +1.5 handed to it whole would have played as +2
+   (since 1.9.3 it puts a part sum the same way, for Counties 5's 41 and 42, and a Counties 5 side's own part point carries through
+   rateOf into the sum here, so its Form moves it by exactly the boost, 42 plus 1 a sum of 6.75). The engine
    reads abilities as given (abilityOf, the match's M.nat; a career player's are fractional already), so the half plays as a half, and the
    card shows +1 on one ability and +0.5 on the other. A side at 5 everywhere has nowhere for it, and plays as it is. */
 function realSide(t) {
@@ -1686,7 +1711,10 @@ function cleanSide(t) {
   if (HEX.test(t.alt)) team.alt = t.alt;
   if (HEX.test(t.altTrim)) team.altTrim = t.altTrim;
   if (t.cat != null && catOf(t) === t.cat) team.cat = t.cat;   // Men | Women | Minis, kept as it was started; a side saved before it has none and is men's
-  for (const [k] of ABILITIES) team[k] = clamp(Math.round(abilityOf(t, k) || 1), 1, 5);   // a side saved before Stamina gets 3
+  // whole pips, but a built-in club's part point (Counties 5's 41 and 42: PART_SUM, src/ratings.js) is put back where the side holds exactly
+  // its club's own part now, so a championship, cup or career saved with it reads as saved; one saved before (whole) keeps its whole pips
+  const own = !t.custom && !String(t.key || '').startsWith('lg-') && typeof ALL_TEAMS !== 'undefined' ? ALL_TEAMS.find(c => c.id === id && !c.custom) : null;
+  for (const [k] of ABILITIES) { const v = abilityOf(t, k); team[k] = own && !Number.isInteger(own[k]) && own[k] === v ? v : clamp(Math.round(v || 1), 1, 5); }   // a side saved before Stamina gets 3
   return team;
 }
 /* null means the championship cannot be shown or played, so it is dropped instead of crashing the table. */
@@ -6573,7 +6601,7 @@ const careerListOf = t => (careerBuiltIn(t) ? (LOCAL_VIEW[t.id] && TEAM_LISTS.fi
    keeps its sides as saved, as a championship does. */
 function careerRated(club) {
   const l = careerListOf(club), now = l && l.teams.find(o => o.id === club.id);
-  if (now) for (const [k] of ABILITIES) club[k] = clamp(Math.round(abilityOf(now, k) || 1), 1, 5);
+  if (now) for (const [k] of ABILITIES) club[k] = clamp(abilityOf(now, k) || 1, 1, 5);   // as its list has it: whole, or a Counties 5 club's part point (PART_SUM, src/ratings.js), never rounded to a whole one
   return club;
 }
 /* The list a club was picked from, as the save keeps it: a built-in club's, the one picked while the club is on it (Guildfordians is on
@@ -13252,7 +13280,7 @@ function pickPanel(s) {
     const stars = teamTraitNames(t), re = t.league ? realNews(t, 'men') : null, line = re && re.league ? re.league : pickHomeLine(t, cat), rc = realCard(t, cat);   // a club's league this season from results.json while its result is fresh: clubs have moved
     card = `<button class="team pk-pick" data-act="pick"${t.legend ? ' data-legend="1"' : ''} aria-pressed="${st.set}">${jerseyRated(t, 'big')}<span class="tid"><span class="tname">${esc(listName(t))}</span><span class="pk-rate">${ratedStars(t)}${pickTag(s, t)}${realChip(rc.d)}</span>${line ? `<span class="pk-league${line === g.name && !rc.d ? ' dup' : ''}">${rc.d ? realChip(rc.d, ' pk-lf') + `<span class="pk-lt">${esc(line)}</span>` : esc(line)}</span>` : rc.d ? `<span class="pk-league pk-lfo">${realChip(rc.d, ' pk-lf')}</span>` : ''}${stars.length ? `<span class="tstars" aria-label="Star Traits: ${esc(stars.join(', '))}" data-names="${esc(stars.join('|'))}">${pickTraitsHtml(stars)}</span>` : ''}</span></button>`
       + `<span class="pk-stats">${ABILITIES.map(([k, l]) => { const a = abilityOf(t, k), b = rc.d ? abilityOf(rc.side, k) : a, dv = Math.round((b - a)*10)/10, pip = v => String(Math.round(v*10)/10);   // the real change, to a tenth: +1.5 is +1 on one ability and +0.5 on the next (realSide)
-          if (!dv) return `<span class="pk-st"><span class="lbl">${l}</span><span class="pk-bar" role="img" aria-label="${l} ${Math.round(a)} of 5"><i style="--v:${(a/5).toFixed(2)}"></i></span></span>`;
+          if (!dv) return `<span class="pk-st"><span class="lbl">${l}</span><span class="pk-bar" role="img" aria-label="${l} ${Math.round(a*100)/100} of 5"><i style="--v:${(a/5).toFixed(2)}"></i></span></span>`;   // a part point (Counties 5's 41 and 42: PART_SUM) shown and said as it is, Pace 1.75 of 5
           const up = dv > 0, mark = `<em class="pk-${up ? 'up' : 'down'}" aria-hidden="true">${up ? '+' : '\u2212'}${pip(Math.abs(dv))}</em>`;   // the week's point, beside the name: +1, +0.5 or −1
           return `<span class="pk-st"><span class="lbl">${l}${mark}</span><span class="pk-bar" role="img" aria-label="${l} ${pip(b)} of 5, ${realFormSaid(dv)}"><i style="--v:${(Math.min(a, b)/5).toFixed(2)}"></i><b class="pk-real ${up ? 'up' : 'down'}" style="--a:${(Math.min(a, b)/5).toFixed(2)};--w:${(Math.abs(b - a)/5).toFixed(2)}"></b></span></span>`; }).join('')}</span>${edit}`;
   }
@@ -19812,7 +19840,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, goalOf, windNow, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels,
     dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene, arrowShow },
   sidesOf:{ teamSide, sidesMeet, MIXED_THROUGH, careerNewOpen, careerNewGo, careerLookSet, careerLookOpen, careerLook, CAREER_LOOK, CAREER_BUILDS, renderCareerEnd, draft:() => careerDraft, teamList:() => teamList, quickPick:() => quickPick, artPreview, deleteTeam:() => $('bd-del').click(), saveBuilder:() => $('bd-save').click() },
-  ratings:{ BUNDLED:RATINGS_BUNDLED, CLUB_RATED, starsOfOverall, starsOf, starsWords, starsHtml, TEAM_LEVELS, teamLevelOf, teamBudget, abilitiesFor, sumOfOverall, clean:ratingsClean, sync:ratingsSync, fetch:ratingsFetch, boot:ratingsBoot, line:ratingsLine, now:() => ratingsNow, waiting:() => ratingsWaiting, reset:() => { ratingsNow = RATINGS_BUNDLED; ratingsWaiting = null; } },
+  ratings:{ BUNDLED:RATINGS_BUNDLED, CLUB_RATED, starsOfOverall, starsOf, starsWords, starsHtml, TEAM_LEVELS, teamLevelOf, teamBudget, abilitiesFor, sumOfOverall, sumOfRated, PART_SUM, clean:ratingsClean, sync:ratingsSync, fetch:ratingsFetch, boot:ratingsBoot, line:ratingsLine, now:() => ratingsNow, waiting:() => ratingsWaiting, reset:() => { ratingsNow = RATINGS_BUNDLED; ratingsWaiting = null; } },
   real:{ RESULTS, SITE:RESULTS_SITE, KEPT:RESULTS_KEPT, clean:resultsClean, entry:realEntry, news:realNews, delta:realDelta, side:realSide, base:realBase, open:realOpen, today:realToday, london:londonDate, day:realDay, add:realAdd, form:realForm, said:realFormSaid, line:realLine, opp:realOpp,
     sync:resultsSync, fetch:resultsFetch, boot:resultsBoot, now:() => realNow, waiting:() => realWaiting, set:(table, now) => { RESULTS.now = now || null; realWaiting = null; realNow = table == null ? null : resultsClean(table, realClock(), null); return realNow; } },
   yourTeam:{ teamList:() => teamList, IMPORT_POOL, poolTeams, openBuilder, finishBuilder:() => $('bd-save').click(), delTeam:() => $('bd-del').click(), commitImport:importCommit, importUi:() => importUi, careerDraft:() => careerDraft },

@@ -124,7 +124,10 @@ function cleanSide(t) {
   if (HEX.test(t.alt)) team.alt = t.alt;
   if (HEX.test(t.altTrim)) team.altTrim = t.altTrim;
   if (t.cat != null && catOf(t) === t.cat) team.cat = t.cat;   // Men | Women | Minis, kept as it was started; a side saved before it has none and is men's
-  for (const [k] of ABILITIES) team[k] = clamp(Math.round(abilityOf(t, k) || 1), 1, 5);   // a side saved before Stamina gets 3
+  // whole pips, but a built-in club's part point (Counties 5's 41 and 42: PART_SUM, src/ratings.js) is put back where the side holds exactly
+  // its club's own part now, so a championship, cup or career saved with it reads as saved; one saved before (whole) keeps its whole pips
+  const own = !t.custom && !String(t.key || '').startsWith('lg-') && typeof ALL_TEAMS !== 'undefined' ? ALL_TEAMS.find(c => c.id === id && !c.custom) : null;
+  for (const [k] of ABILITIES) { const v = abilityOf(t, k); team[k] = own && !Number.isInteger(own[k]) && own[k] === v ? v : clamp(Math.round(v || 1), 1, 5); }   // a side saved before Stamina gets 3
   return team;
 }
 /* null means the championship cannot be shown or played, so it is dropped instead of crashing the table. */

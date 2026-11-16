@@ -142,7 +142,9 @@ function realDelta(t) {
    (abilitiesFor, src/ratings.js: no random draw, each ability 1 to 5), with the side as it is kept on the copy (realBase) for the star
    traits and Stronger Side. No boost: the side itself, so a match with none is exactly as before.
    +1.5 (the owner, 15 Nov 2026) is a whole point through abilitiesFor and a real half point on the ability abilitiesFor would give the next
-   whole point to (the strongest still below 5): abilitiesFor rounds its sum, so +1.5 handed to it whole would play as +2. The engine
+   whole point to (the strongest still below 5): abilitiesFor rounded its sum then, so +1.5 handed to it whole would have played as +2
+   (since 1.9.3 it puts a part sum the same way, for Counties 5's 41 and 42, and a Counties 5 side's own part point carries through
+   rateOf into the sum here, so its Form moves it by exactly the boost, 42 plus 1 a sum of 6.75). The engine
    reads abilities as given (abilityOf, the match's M.nat; a career player's are fractional already), so the half plays as a half, and the
    card shows +1 on one ability and +0.5 on the other. A side at 5 everywhere has nowhere for it, and plays as it is. */
 function realSide(t) {

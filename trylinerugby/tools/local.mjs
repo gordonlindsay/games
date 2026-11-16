@@ -163,8 +163,10 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
   const ov = X.overallOf, BAND = { 3:[61, 61], 4:[58, 61], 5:[55, 58], 6:[49, 52], 7:[46, 49] }, lv = t => Q.ownLevel(t);
   const own = ['FAR', 'WIM', 'IRO', 'GUI', 'COB', 'WEY', 'ORU'].map(id => X.ALL_TEAMS.find(t => t.id === id));
   ok(own.every(t => LO.localRated(t) === R.CLUB_RATED[t.id] && ov(t) === R.CLUB_RATED[t.id]) && own.map(t => ov(t)).join() === '58,55,52,49,49,49,46', `localRated gives the game's own seven exactly, each a step under 1.6 (${own.map(t => t.id + ' ' + LO.localRated(t)).join(', ')}): Farnham 58`);
-  const step = { FAR:58, QUI:58, WIM:55, IRO:52, GUI:49, COB:49, WEY:49, ORU:46, KIN:43, HAS:43, ALD:43, GDN:40, EFF:43, WAN:40, EGH:40, MER:40, MIT:40, FEL:40 }, moved = Object.entries(step).filter(([id, v]) => ov(X.ALL_TEAMS.find(t => t.id === id)) !== v || R.CLUB_RATED[id] !== v).map(([id]) => id);
-  ok(!moved.length && R.CLUB_RATED.QUI === R.CLUB_RATED.FAR, `every one of the game's Local and Counties sides a step down: Regional 1 58 and 55, Regional 2 52 and 49, Counties 1 49 and 46, Counties 3 43, Counties 5 40, Quins level with Farnham (${moved.join() || 'all 18'})`);
+  // Re-pinned 16 Nov 2026 (1.9.3, the owner's "Spread by Table" for Counties 5 Surrey): Wandsworth and Guildfordians 42, Egham and Merton 41,
+  // Mitcham and Feltham 40, by part sums (PART_SUM, src/ratings.js); their abilities are the only change (tools/ratings.mjs, section 2b)
+  const step = { FAR:58, QUI:58, WIM:55, IRO:52, GUI:49, COB:49, WEY:49, ORU:46, KIN:43, HAS:43, ALD:43, GDN:42, EFF:43, WAN:42, EGH:41, MER:41, MIT:40, FEL:40 }, moved = Object.entries(step).filter(([id, v]) => ov(X.ALL_TEAMS.find(t => t.id === id)) !== v || R.CLUB_RATED[id] !== v).map(([id]) => id);
+  ok(!moved.length && R.CLUB_RATED.QUI === R.CLUB_RATED.FAR, `every one of the game's Local and Counties sides a step down: Regional 1 58 and 55, Regional 2 52 and 49, Counties 1 49 and 46, Counties 3 43, Counties 5 42 to 40 by its table, Quins level with Farnham (${moved.join() || 'all 18'})`);
   const off = NEW.filter(t => ov(t) !== LO.LOCAL_RATED[t.id] || ov(t) < BAND[lv(t)][0] || ov(t) > BAND[lv(t)][1]).map(t => t.id);
   ok(!off.length, `every new club at its rating, in its band: National League 1 61, National League 2 58 to 61, Regional 1 55 to 58, Regional 2 49 to 52, Counties 1 46 to 49 (${off.join() || NEW.length + ' clubs'})`);
   const nl = lg => NEW.filter(t => new RegExp('^National League ' + lg + '\\b').test(t.league)).map(ov);
@@ -181,7 +183,7 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
   const local = [...new Set(X.TEAM_LISTS.filter(l => l.tier === 2).flatMap(l => l.teams))];
   ok(nat > club && Math.max(...local.map(ov)) <= e2 && Math.max(...local.map(ov)) === 61 && Math.min(...local.map(ov)) === 40, `every nation above every club (${nat} v ${club}); no Local side above an England 2 side (${Math.max(...local.map(ov))} v ${e2}); Local 40 to 61`);
   ok(sums[0] === 40 && R.sumOfOverall(40) === 5 && ov(R.abilitiesFor({ pace:4, power:2 }, R.sumOfOverall(40))) === 40 && Math.min(...sums) === 40, `the scale goes low enough: Counties 5's 40 is its floor, a sum of 5 (every ability 1), whatever the side's flavour (${sums.slice(0, 4).join(' ')})`);
-  ok(R.TEAM_LEVELS.map(l => l.overall).join() === '40,43,49,52,58,64,72,75' && R.TEAM_LEVELS[0].budget === 0 && R.TEAM_LEVELS[0].stars === 1, 'the levels a made team can take a step down from Regional 1, each still the best built-in side of its league (Regional 1 58, Farnham; Counties 5 40, no points to spend, 1 star)');
+  ok(R.TEAM_LEVELS.map(l => l.overall).join() === '40,43,49,52,58,64,72,75' && R.TEAM_LEVELS[0].budget === 0 && R.TEAM_LEVELS[0].stars === 1, 'the levels a made team can take a step down from Regional 1, each still the best built-in side of its league (Regional 1 58, Farnham) but Counties 5, which stays 40, no points to spend, 1 star, under its 42s (1.9.3)');
 }
 
 // 3. County cups: every club's county and cup, sourced tables or the plain one, a level under them, rivals from its own county first

@@ -139,7 +139,7 @@ const careerListOf = t => (careerBuiltIn(t) ? (LOCAL_VIEW[t.id] && TEAM_LISTS.fi
    keeps its sides as saved, as a championship does. */
 function careerRated(club) {
   const l = careerListOf(club), now = l && l.teams.find(o => o.id === club.id);
-  if (now) for (const [k] of ABILITIES) club[k] = clamp(Math.round(abilityOf(now, k) || 1), 1, 5);
+  if (now) for (const [k] of ABILITIES) club[k] = clamp(abilityOf(now, k) || 1, 1, 5);   // as its list has it: whole, or a Counties 5 club's part point (PART_SUM, src/ratings.js), never rounded to a whole one
   return club;
 }
 /* The list a club was picked from, as the save keeps it: a built-in club's, the one picked while the club is on it (Guildfordians is on
