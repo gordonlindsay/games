@@ -1,6 +1,6 @@
 {
  "v": 1,
- "generated": "2026-11-16T02:13:14Z",
+ "generated": "2026-11-16T18:55:59Z",
  "season": "2026-27",
  "clubs": {
   "ACH": {
@@ -741,7 +741,7 @@
    "date": "2026-11-14",
    "ha": "a",
    "res": "W",
-   "f": 70,
+   "f": 78,
    "a": 5,
    "opp": "CAE",
    "oppName": "Camberley",
@@ -1330,7 +1330,7 @@
    "ha": "h",
    "res": "L",
    "f": 5,
-   "a": 70,
+   "a": 78,
    "opp": "BOG",
    "oppName": "Bognor",
    "comp": "Regional 2 South Central",
