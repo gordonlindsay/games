@@ -102,7 +102,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   X.setChamp(null); T.home.champPick('sur');
   ok($('m-store').hidden && D.pickMode() === 'champ' && !$('s-teams').hidden, 'Championship (a league picked on the home) opens its team screen');
   C.set(null); $('cn-mine').innerHTML = ''; C.open();
-  ok($('m-store').hidden && /Farnham/.test($('cn-mine').innerHTML), 'Career opens the new player screen');
+  ok($('m-store').hidden && />My Team</.test($('cn-mine').innerHTML) && D.settings().myClub === null, 'Career opens the new player screen (no club picked: My Team in a plain kit, 1.10; Farnham before)');
   T.stamina.openBuilder(null);
   ok($('m-store').hidden && !$('s-build').hidden, 'Create Team opens the builder');
   I.open();
@@ -160,7 +160,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   const c0 = JSON.stringify(X.champ()), cr0 = JSON.stringify(C.get());
   D.goHome();
   ok($('b-champ').classList.contains('locked') && $('b-champ').textContent === 'Continue Championship' && !$('champ-note').hidden, 'Continue Championship keeps its label and its note, with a lock');
-  ok($('b-career').classList.contains('locked') && $('b-continue').classList.contains('locked') && /^Championship · /.test($('cont-note').textContent), 'the Career box likewise, and Continue (a championship and a career under way), its line kept');
+  ok($('b-career').classList.contains('locked') && !$('b-match').classList.contains('locked') && /^Continue · /.test($('game-note').textContent) && /^Continue · /.test($('career-note').textContent), 'the Career tile likewise, its note kept; Game free, its note the championship\'s (1.10: Continue gone from the home, a championship and a career under way)');
   const seg = document.querySelectorAll('.seg[data-key]').find(g => g.dataset.key === 'diff');
   ok(!$('b-grown').hidden && $('hp-settings').classList.contains('grown') && $('b-comps').classList.contains('locked') && $('b-career').classList.contains('locked') && !$('b-match').classList.contains('locked') && !$('b-quick').classList.contains('locked') && !$('b-drills').classList.contains('locked') && !$('b-set').classList.contains('locked'), 'Grown-Ups in Settings beside Sound and Match Help; Competitions and the Career box carry the lock, Match, Quick Match, Skill Games and Settings none');
   $('b-champ').click();
@@ -487,13 +487,13 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   ok(S.first([X.CLUBS[0], X.FRANCE[1], X.FRANCE[0]]).map(t => t.id).join() === 'TLS,FAR,BOR', 'storeFirst moves the club to the front and keeps the rest in order');
   ok(S.first([{ ...X.FRANCE[0], custom:true }, X.CLUBS[0]])[0].custom, 'a team made by the player is never taken for the club');
   S.setBought([]);
-  ok(S.homePool() === 'sur' && S.homeTeam() === X.CLUBS[0], 'no Super Fan: Local · Surrey, Farnham, as before');
+  ok(S.homePool() === 'sur' && S.homeTeam() === null, 'no Super Fan: Local · Surrey as before, and no club of its own (1.10: no default club; Farnham before)');
   S.setBought(['tryline.fan.oldclub']);
   ok(FEATURES.every(f => S.has(f)) && S.fan() === null && S.offers('champ').length === 0, 'a Super Fan of a club since dropped keeps everything it unlocked, with no badge');
   // careerClubs: the Super Fan's club first on the new player screen
   S.setBought(['tryline.fan.guildford']);
   const careerSrc = read('src/ui-career.js');
-  ok(menus.includes("if (pickMode === 'career') return pickLadder(cat, { clubs:true, mine:'teams', fav:true, fits:t => !isNation(t) && !t.legend }).map(g => ({ ...g, teams:storeFirst(g.teams) }));") && /careerDraft = \{ club:myClubTeam\(\), league:pool/.test(careerSrc) && /const myClubTeam = \(\) => myClubFind\(settings\.myClub\) \|\| storeHomeTeam\(\);/.test(menus), 'Career\'s club groups put the Super Fan\'s club first, and a new player starts with My Team\'s club (the Super Fan\'s until one is picked)');
+  ok(menus.includes("if (pickMode === 'career') return pickLadder(cat, { clubs:true, mine:'teams', fav:true, fits:t => !isNation(t) && !t.legend }).map(g => ({ ...g, teams:storeFirst(g.teams) }));") && /careerDraft = \{ club:myClubTeam\(\), league:pool/.test(careerSrc) && /const myClubTeam = \(\) => myClubFind\(settings\.myClub\) \|\| storeHomeTeam\(\) \|\| \(settings\.myClubLegacy \? DEFAULT_TEAM : null\);/.test(menus), 'Career\'s club groups put the Super Fan\'s club first, and a new player starts with My Team\'s club (the Super Fan\'s until one is picked)');
   ok(menus.includes("teams:storeFirst(teams) }"), 'and so does Championship\'s team screen');
   S.setBought([]); D.goHome();
   ok($('st-fan').hidden && !$('s-home').classList.contains('fan'), 'no Super Fan: no badge, the plain box');

@@ -26,7 +26,8 @@ globalThis.localStorage = { getItem:k => memory[k] ?? null, setItem(k, v) { memo
 const saved = () => JSON.parse(memory['tryline.v1']);
 const st = D.settings();
 const by = id => X.ALL_TEAMS.find(t => t.id === id);
-const fresh = () => { st.pick = [null, null]; st.recent = [[], []]; st.fav = []; st.cat = 'men'; st.myClub = null; st.myNat = null; X.custom().length = 0; T.importer.setLeague(null); X.setChamp(null); L.set(L.fresh()); };
+// My Team's club is Farnham, set as a fixture: since 1.10 a new game has no club (tools/links.mjs has the Filter at the top it opens then)
+const fresh = () => { st.pick = [null, null]; st.recent = [[], []]; st.fav = []; st.cat = 'men'; st.myClub = 'FAR'; st.myClubLegacy = false; st.myNat = null; X.custom().length = 0; T.importer.setLeague(null); X.setChamp(null); L.set(L.fresh()); };
 const golds = n => { L.set(L.fresh()); L.FEATS.filter(f => f.id !== 'star').slice(0, n).forEach(f => { L.state().n[f.id] = 10; }); };
 const rungs = (cat, o) => P.ladder(cat, o).map(g => `${P.where(g)}: ${g.name} ${g.teams.length}`);
 const names = g => g.teams.map(t => t.act ? '+' + t.name : X.listName(t)).join(',');
@@ -276,7 +277,7 @@ const BRK = T.local.pickLocalOrder(X.TEAM_LISTS.find(l => l.key === 'brk').teams
   ok(shown(0).id === 'DUB' && P.primary() === 'Pick Dublin', 'Pick Dublin');
   P.go();
   ok(C.draft().club.id === 'DUB' && C.draft().league === 'cel', 'a pick of Dublin plays the URC: the career\'s league is the whole list (cel)');
-  fresh(); st.myClub = null; D.openTeams('my');
+  fresh(); D.openTeams('my');
   ok($('t-title').textContent === 'Pick Your Club' && shown(0).id === 'FAR' && P.primary() === 'Done', 'My Team: the club first (Farnham), Done while it is');
   ok(!view(0).ladder.some(g => g.teams.some(t => t.legend)), 'no Legends');
   P.step(0, 1); const club = shown(0); P.go();
@@ -454,8 +455,8 @@ const BRK = T.local.pickLocalOrder(X.TEAM_LISTS.find(l => l.key === 'brk').teams
   ok(walked.length > 100 && walked.every(t => !t.act && !t.legend && !X.isNation(t)) && !P.filterSearch(view(0).ladder, 'eng').some(h => X.isNation(h.t)), `every column of Career's: clubs only, no nation, Legend, Create Team or Add Your Team (${walked.length} rows), and its search the same`);
   P.filterType('zzq'); ok(/<p class="fl-none">No Clubs Found<\/p>/.test($('fl-res').innerHTML), 'no match: No Clubs Found');
   P.filterShut(); C.set(null);
-  T.profile.open(); T.profile.answer('adult'); T.profile.answer('male');
-  ok(D.pickMode() === 'setup' && P.filter(0, '', { dev:'touch' }) && P.findWord() === 'Clubs' && cols().every(k => k.kind !== 'team' || k.rows.every(t => t.act || !X.isNation(t))), 'the setup\'s Club: Search Clubs, the clubs only');
+  T.profile.open(); T.profile.answer('adult'); T.profile.answer('male'); T.profile.answer('normal');   // 1.10: Difficulty before the Club, which opens its Filter at the top itself (tools/links.mjs)
+  ok(D.pickMode() === 'setup' && P.filterState().open && P.filterState().top && P.findWord() === 'Clubs' && $('fl-q').placeholder === 'Search Clubs' && cols().every(k => k.kind !== 'team' || k.rows.every(t => t.act || !X.isNation(t))), 'the setup\'s Club: Search Clubs, the clubs only');
   P.filterShut(); D.goHome();
   // fixed lists: no Filter, no icon, no group button
   for (const c of ['world', 'tour']) { D.openTeams('champ', c); ok(!P.filterable(view(0)) && !P.filter(0, '', { dev:'touch' }) && !fs0().open && $('t-find').hidden && !P.panel(0).includes('data-act="sheet"'), `the ${c === 'world' ? 'World Cup' : 'tour'}: a fixed list, no Filter, no icon, no group button`); }
@@ -654,9 +655,9 @@ const BRK = T.local.pickLocalOrder(X.TEAM_LISTS.find(l => l.key === 'brk').teams
   D.openTeams('quick'); for (const s of [0, 1]) { P.filter(s, '', { dev:'touch' }); for (let k = 0; k < 5; k++) { P.filterSel(0, k); P.filterSel(1, 0); } for (const q of ['b', 'ba', 'Premiership', 'zz', '']) P.filterType(q); P.filterClose(); }
   P.filter(0, 'bath', { dev:'touch' }); P.filterPick(P.filterState().hits[0].gi, P.filterState().hits[0].i);
   ok(rndCalls() === before, `the team screen and its Filter draw no random number (${rndCalls() - before})`);
-  ok(T.GAME_VERSION === '1.9.3' && $('ver').textContent === 'Version 1.9.3', 'GAME_VERSION is 1.9.3 (1.2 the side-by-side picker, 1.3 the profile, 1.4 the Filter and fewer knock-ons, 1.5 Settings, goal kicks and the stick, 1.6 the possession calls and the kick chase, 1.7 the county clubs, with 1.6.1\'s five changes folded in, never released on their own, 1.8 the kit designs and a third colour, 1.8.1 the team screen\'s arrows and the away kit\'s tie, 1.8.2 Add Your Team on the web, 1.9 real results, 1.9.1 the wider halves side on and a Plain shirt\'s collar trim, 1.9.2 last season\'s lines for eight Counties 1 clubs and the last six kits, 1.9.3 Counties 5 spread by its table, 42, 41 and 40), on window.__tryline and at the foot of Settings');
+  ok(T.GAME_VERSION === '1.10' && $('ver').textContent === 'Version 1.10', 'GAME_VERSION is 1.10 (1.2 the side-by-side picker, 1.3 the profile, 1.4 the Filter and fewer knock-ons, 1.5 Settings, goal kicks and the stick, 1.6 the possession calls and the kick chase, 1.7 the county clubs, with 1.6.1\'s five changes folded in, never released on their own, 1.8 the kit designs and a third colour, 1.8.1 the team screen\'s arrows and the away kit\'s tie, 1.8.2 Add Your Team on the web, 1.9 real results, 1.9.1 the wider halves side on and a Plain shirt\'s collar trim, 1.9.2 last season\'s lines for eight Counties 1 clubs and the last six kits, 1.9.3 Counties 5 spread by its table, 42, 41 and 40, 1.10 no default club, team links, the setup\'s Difficulty and a calmer home with Team and Settings), on window.__tryline and at the foot of Team and Settings\' Game tab');
   const src = readGameSource();
-  ok((src.match(/\bconst GAME_VERSION\b/g) || []).length === 1 && src.includes("const GAME_VERSION = '1.9.3';") && /<p class="ver" id="ver">Version 1\.9\.3<\/p>/.test(src), 'one constant (main\'s 1.1 from PR #17 merged away, not declared twice), and the line in Settings');
+  ok((src.match(/\bconst GAME_VERSION\b/g) || []).length === 1 && src.includes("const GAME_VERSION = '1.10';") && /<p class="ver" id="ver">Version 1\.10<\/p>/.test(src), 'one constant (main\'s 1.1 from PR #17 merged away, not declared twice), and the line in Settings');
   ok(!/id="home-tag"|\$\('home-tag'\)/.test(src), 'and no home tagline for it: PR #17\'s v1.1 line went with the tidied home, so nothing writes to an element that is not there');
   ok(!/[←-⇿⟵-⟿]/.test(src.slice(src.indexOf('<section class="screen" id="s-teams"'), src.indexOf('<section class="screen" id="s-build"'))), 'no arrow glyph on the team screen');
   fresh();
@@ -893,7 +894,7 @@ async function browserChecks() {
             T.debug.openTeams('quick'); for (const q of ['ba', 'a', 'Premiership', 'zzq', 'new zealand 19']) { P.filter(0, q, { dev:'touch' }); flCheck('search ' + q); n++; P.filterShut(); }
             // the icon in the top bar: in every mode beside the title and the rest, nothing on anything, nothing off the side
             for (const m of ['quick', 'two', 'my', 'career', 'setup', 'champ']) {
-              if (m === 'career') { T.career.set(null); T.career.newOpen(); T.career.clubOpen(); } else if (m === 'setup') { T.profile.open(); T.profile.answer('adult'); T.profile.answer('male'); } else if (m === 'champ') T.debug.openTeams('champ', 'eng'); else if (m === 'two') { T.debug.openJoin(); T.debug.openTeams('two'); } else T.debug.openTeams(m);
+              if (m === 'career') { T.career.set(null); T.career.newOpen(); T.career.clubOpen(); } else if (m === 'setup') { T.profile.open(); T.profile.answer('adult'); T.profile.answer('male'); T.profile.answer('normal'); } else if (m === 'champ') T.debug.openTeams('champ', 'eng'); else if (m === 'two') { T.debug.openJoin(); T.debug.openTeams('two'); } else T.debug.openTeams(m);
               const kids = [...document.querySelector('#s-teams .pk-top').children].filter(e => !e.hidden && e.getBoundingClientRect().width), rs = kids.map(e => e.getBoundingClientRect()), nm = document.querySelector('#s-teams .pk-name');
               for (let i = 1; i < rs.length; i++) if (rs[i].left < rs[i - 1].right - 0.5) bad.push(`top bar ${m}: ${kids[i].id || kids[i].className} on ${kids[i - 1].id || kids[i - 1].className}`);
               if (nm.scrollWidth > nm.clientWidth + 1 || rs.some(r => r.right > innerWidth + 0.5)) bad.push(`top bar ${m}: the title or a button cut`);

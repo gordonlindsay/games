@@ -460,6 +460,7 @@ const steps = n => { for (let i = 0; i < n; i++) T.update(T.STEP); };
   const src = readGameSource(), html = src.slice(src.indexOf('id="s-career-new"'), src.indexOf('id="s-career"'));
   ok(/<span class="lbl">Play as<\/span><div class="seg" id="cn-mode"><button>Whole Team<\/button><button>My Player<\/button><\/div>/.test(html), 'New Player: Play as, Whole Team first, My Player second, one balanced row of two');
   ok(html.indexOf('id="cn-mine"') < html.indexOf('id="cn-mode"') && html.indexOf('id="cn-mode"') < html.indexOf('class="cr-form"') && html.indexOf('class="cr-form"') < html.indexOf('id="cn-go"'), 'under Your Player and Team on the left, so Start Career stays in view on the right');
+  T.debug.settings().myClub = 'FAR';   // My Team's club as a fixture: since 1.10 a new game has none, and Start Career with no club opens the club picker first (tools/links.mjs)
   C.set(null); C.newOpen();
   ok(P.draft().proMode === false, 'Whole Team is picked to start');
   $('cn-go').click();

@@ -363,7 +363,7 @@ for (const step of ['count', 'answer']) {
   const quick = { hidden:false, disabled:false };
   const candidates = [quick, t.elements['b-install'], t.elements['offline-update']];
   candidates.forEach((el, i) => {
-    const id = ['b-continue', 'b-install', 'offline-update'][i];
+    const id = ['b-match', 'b-install', 'offline-update'][i];   // the home's first tile (Game, 1.10: Continue's place as the ring's start), Install Game, Updating
     const tag = html.match(new RegExp('<(?:button|span)[^>]*id="' + id + '"[^>]*>'))[0];
     const classes = (tag.match(/class="([^"]+)"/) || [0, ''])[1].split(/\s+/);
     el.matches = selector => selector.startsWith('.') && classes.includes(selector.slice(1));
@@ -379,14 +379,14 @@ for (const step of ['count', 'answer']) {
   } };
   t.context.M = null;
   t.context.document = { querySelectorAll:selector => selector === '.screen' ? [layer] : [] };
-  t.context.$ = id => id === 'b-continue' ? quick : t.elements[id];
+  t.context.$ = id => id === 'b-match' ? quick : t.elements[id];
   vm.runInContext(navSource, t.context);
   const nav = t.context;
   t.elements['offline-update'].hidden = false;             // as while Updating shows
   ok(Array.from(nav.navCands(layer)).length === 1 && nav.navCands(layer)[0] === quick, 'hidden install is not a pad candidate, nor is Updating');
   t.window.emit('beforeinstallprompt', t.installEvent());
   ok(Array.from(nav.navCands(layer)).length === 2 && nav.navCands(layer)[1] === t.elements['b-install'], 'visible install uses the production selector');
-  ok(nav.navMove(0, 0, 0) === quick, 'the ring starts on Continue (Play)');
+  ok(nav.navMove(0, 0, 0) === quick, 'the ring starts on Game (1.10: the first tile, where Continue was)');
   ok(nav.navMove(0, 0, 1) === t.elements['b-install'], 'down to Install Game');
   ok(nav.navPress(0) === true, 'pressed'); await tick();
   ok(t.installs === 1, 'pad confirm invokes the real install handler');
@@ -456,7 +456,7 @@ async function browserChecks() {
   const state = pg => read(pg, () => {
     const T = window.__tryline, c = T.teams.champ(), cr = T.career.get(), $ = id => document.getElementById(id);
     return { save:localStorage.getItem('tryline.v1'), seen:JSON.stringify({ round:c && c.round, results:c && c.results.length, year:cr && cr.year, played:cr && cr.season && cr.season.round, sound:T.debug.settings().sound,
-      notes:[$('b-champ').textContent, $('champ-note').textContent, $('cont-name').textContent + ' · ' + $('cont-note').textContent, $('career-note').textContent] }) };
+      notes:[$('b-champ').textContent, $('champ-note').textContent, $('b-match').getAttribute('aria-label'), $('b-career').getAttribute('aria-label')] }) };   // 1.10: each tile's note in its name (Game, Continue · Round 3 v ...; Career, Continue · ...), the fitted line aside
   });
   const same = (a, b) => a.save === b.save && a.seen === b.seen;
   try {
@@ -493,7 +493,7 @@ async function browserChecks() {
       return true;
     });
     const before = await state(page), was = JSON.parse(before.seen);
-    check(was.round === 2 && was.results === 2 && was.played === 1 && was.sound === false && /Continue Championship/.test(was.notes[0]) && /^Continue · Career · /.test(was.notes[2]), `a championship and a career mid-way (Continue on the career, played last), Sound Off (${was.round}, ${was.played})`);
+    check(was.round === 2 && was.results === 2 && was.played === 1 && was.sound === false && /Continue Championship/.test(was.notes[0]) && /^Game, Continue · Round 3 v /.test(was.notes[2]) && /^Career, Continue · /.test(was.notes[3]), `a championship and a career mid-way (1.10: each on its own tile, Game's Continue · Round 3 and Career's), Sound Off (${was.round}, ${was.played})`);
 
     // 1. the owner's case: build two is published and the page reloaded: it opens on build one, the new worker waits, and with the
     //    pointer moving nothing happens; once the home is quiet it becomes build two with no tap

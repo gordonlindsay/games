@@ -61,7 +61,7 @@ function lockerFanCabinet() {
 }
 
 /* ---------- the home button ---------- */
-function lockerHome() {                                      // from renderHome: a dot on Locker while a medal waits there unseen
+function lockerHome() {                                      // from renderHome: a dot on Locker while a medal waits there unseen (and on the Team and Settings tile: homeSetNote, src/ui-menus.js)
   const b = $('b-locker'); if (!b || !b.classList) return;
   const fresh = lockerNew();
   if (b.classList.contains('note') !== fresh) { b.classList.toggle('note', fresh); b.setAttribute('aria-label', fresh ? 'Locker, a new medal' : 'Locker'); }
@@ -111,7 +111,7 @@ function renderLocker(news) {
 function lockerSetTab(i) { lockerTab = clamp(i, 0, LOCKER_TABS.length - 1); renderLocker(); }
 [...$('lk-tabs').children].forEach((b, i) => b.addEventListener('click', () => lockerSetTab(i)));
 $('b-locker').addEventListener('click', () => { ac(); lockerOpen(0); });
-$('lk-back').addEventListener('click', goHome);
+$('lk-back').addEventListener('click', () => goHome($('b-locker')));   // back to Team and Settings' Team tab, on Locker
 
 /* ---------- full time ---------- */
 /* The full-time card: a row for each medal this match won (its pip, its name, what it unlocked), and a line for the Legends a new

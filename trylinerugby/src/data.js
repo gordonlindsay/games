@@ -3,7 +3,7 @@ let practice = null;
 /* The game's own version, small at the foot of Settings and on window.__tryline (the owner, 2026-11-11: "bump GAME_VERSION to 1.2", on
    top of main's 1.1 from PR #17, which showed it after the home's tagline; the tidied home has no tagline, so Settings is its one place).
    The app's store version (app/package.json, 1.0.0) is the app's, and apart from this. */
-const GAME_VERSION = '1.9.3';
+const GAME_VERSION = '1.10';
 
 /* =========================================================
    Data
@@ -251,7 +251,7 @@ const LIST_LOCAL = ['sur', 'cty'];
 for (const l of TEAM_LISTS) if (l.county && !LIST_LOCAL.includes(l.key)) { LIST_HOME[l.key] = 'ENG'; LIST_LOCAL.push(l.key); }   // LOCAL: each county, England's
 const LEAGUE_SHORT = { 'English Premiership':'Premiership', 'English Championship':'Championship', 'Top 14':'Top 14', 'United Rugby Championship':'URC', 'Currie Cup':'Currie Cup', 'Super Rugby Pacific':'Super Rugby' };
 const LIST_GROUP = { sco:'Premiership', nzl:'Provinces' };   // sides with no league line: Scotland's are the Scottish Premiership, New Zealand's the provinces
-const DEFAULT_TEAM = CLUBS[0];           // Farnham: the team screen opens on Local · Surrey with it picked
+const DEFAULT_TEAM = CLUBS[0];           // Farnham, as a fixture only since 1.10 (the drills' side, 2 Players' placeholder, an old save's My Team: myClubTeam): no new game starts on it
 /* Men | Women | Minis on the team screen, for the match or championship being set up; Men | Women in Career. Only the name and the
    team's cat change ('England Women', 'Farnham Minis'): ratings, kit, code and the engine are the same. A women's or minis side
    carries cat ('women' | 'minis') into newMatch and the saves, for the drawing; a team without one is men's (catOf). */

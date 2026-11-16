@@ -35,7 +35,7 @@ assert.doesNotMatch($('history').innerHTML,/<img/);
 assert.match($('history').innerHTML,/No honours/);
 const html = fs.readFileSync(new URL('../index.html', import.meta.url),'utf8');
 assert.match(html,/<section class="screen" id="s-cabinet" hidden>[\s\S]*?<div class="cabinet home-cabinet" id="home-history"><\/div>[\s\S]*?id="cab-back" data-back>Back to Menu</);   // the home's Trophy Cabinet: its own screen, from its strip under My Team's box
-assert.match(html,/<button class="btn tc-strip" id="b-cabinet" hidden><span class="tc-name">Trophy Cabinet<\/span><span class="tc-list" id="tc-list"><\/span><\/button>/);   // a slim strip: its name, then each kind won
+assert.match(html,/<button class="btn ts-row tc-strip" id="b-cabinet" hidden><span class="tc-name">Trophy Cabinet<\/span><span class="tc-list" id="tc-list"><\/span><\/button>/);   // a row on Team and Settings' Team tab (1.10): its name, then each kind won
 assert.match(html,/<details[^>]+id="hub-cabinet"/);
 assert.match(source,/b = \$\('b-cabinet'\);\s*b\.hidden = !champHistory\.length && !fans\.length;/);   // a finished season or cup, or a Super Fan trophy
 assert.match(source,/renderCabinet\('home-history'\); showScreen\('s-cabinet'\)/);

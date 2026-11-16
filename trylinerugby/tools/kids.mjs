@@ -524,7 +524,7 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
 // focus on Keep Minis; the page under it inert; the ring back on the button that asked
 {
   const MN = K.minis; let went = 0, kept = 0; const go = () => went++, keep = () => kept++;
-  const card = html.slice(html.indexOf('<div class="modal" id="m-minis"'), html.indexOf('<div class="modal" id="m-wall"'));
+  const card = html.slice(html.indexOf('<div class="modal" id="m-minis"'), html.indexOf('<div class="modal"', html.indexOf('<div class="modal" id="m-minis"') + 10));   // to the next card (1.10's Make Farnham My Team?, tools/links.mjs)
   ok(/<h3 id="mn-q">Leave Minis\?<\/h3>/.test(card) && /<p class="mn-line" id="mn-line">Minis is tag rugby, with no tackles or contact games\.<\/p>/.test(card), 'the question, Leave Minis?, and the one line on what Minis is');
   ok(/<div class="row2"><button class="btn" id="mn-go">Change<\/button><button class="btn" id="mn-keep" data-back>Keep Minis<\/button><\/div>/.test(card), 'Change then Keep Minis, two plain buttons in equal halves, Keep Minis its Back');
   ok(card.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).join(' ') === 'Leave Minis? Minis is tag rugby, with no tackles or contact games. Change Keep Minis', 'no other words on it: no eyebrow, no prose');

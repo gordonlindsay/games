@@ -206,8 +206,8 @@ function turn(run) {
       const o = d.opts[pick], moved = Object.entries(o.fx).every(([k, v]) => { const was = before[k], now = k in cr.skills ? cr.skills[k] : cr.life[k]; return now === Math.max(k in cr.skills ? 1 : 0, Math.min(k in cr.skills ? 99 : 100, was + v)); });
       if (!moved || L.dilemma(cr) || $('cr-play').hidden) bad(`answering "${d.q}" with ${o.name} did not do what it says`);
     } else if (!cup && !$('cr-dilemma').hidden) bad('a dilemma card with no dilemma');
-    // a visit to the menu and back now and then: Back to Menu, then Continue Career
-    if (cr.totals.matches % 7 === 3) { $('cr-back').click(); if (shown() !== 's-home' || $('cont-name').textContent !== 'Continue' || !/^Career · /.test($('cont-note').textContent)) bad('Back to Menu'); $('b-career').click(); if (shown() !== 's-career') bad('the Career box from the menu'); }
+    // a visit to the menu and back now and then: Back to Menu, the Career tile's note on the career (1.10: Continue's place), then the tile
+    if (cr.totals.matches % 7 === 3) { $('cr-back').click(); if (shown() !== 's-home' || $('career-note').hidden || !/^Continue · /.test($('career-note').textContent)) bad('Back to Menu'); $('b-career').click(); if (shown() !== 's-career') bad('the Career box from the menu'); }
     train(run, spec.stars);
     const plan = spec.plan(run.cr, f);
     match(run, f, plan);
@@ -443,9 +443,9 @@ ok(A.bars.spirit.lo <= 10 && B.bars.spirit.hi > 50 && B.bars.spirit.lo >= 10, `T
   X.save(); C.set(null); K.set(null); X.restore(JSON.parse(memory['tryline.v1']));
   ok(C.get() && C.get().cup && C.get().cup.id === 'world' && K.get() && K.get().id === 'world' && C.get().cup.teams[C.get().cup.user].id === 'ENG' && K.get().teams[K.get().user].id === 'FRA', 'both saved, both read back, each its own');
   X.renderHome();
-  ok(/^Career · Pool [ABCD] v /.test($('cont-note').textContent) && $('career-note').hidden && $('b-champ').textContent === 'Continue Championship' && /World Cup.*Pool [ABCD]/.test($('champ-note').innerHTML) && /France/.test($('champ-note').innerHTML), `the menu: Continue on the career (played last) with its line, and Competitions' Continue Championship with its own note (${$('cont-note').textContent} / ${$('champ-note').innerHTML.replace(/<[^>]+>/g, '')})`);
+  ok(/^Continue · Pool [ABCD] v /.test($('career-note').textContent) && /^Continue · Pool [ABCD] v /.test($('game-note').textContent) && $('b-champ').textContent === 'Continue Championship' && /World Cup.*Pool [ABCD]/.test($('champ-note').innerHTML) && /France/.test($('champ-note').innerHTML), `the menu (1.10, each on its own tile): the Career tile's note on the career's Pool, Game's on the World Cup's, and Competitions' Continue Championship with its own note (${$('career-note').textContent} / ${$('game-note').textContent} / ${$('champ-note').innerHTML.replace(/<[^>]+>/g, '')})`);
   T.debug.settings().last = 'champ'; X.renderHome();
-  ok(/^World Cup · Pool [ABCD] v /.test($('cont-note').textContent) && !$('career-note').hidden && /^Pool [ABCD] v \S/.test($('career-note').textContent), `the World Cup played last: Continue on it, and the Career box's own note, the career's fixture in its Pool (re-pinned 2026-11-11: no year or side, My Team's box names it) (${$('cont-note').textContent} / ${$('career-note').innerHTML.replace(/<[^>]+>/g, '')})`);
+  ok(/^Continue · Pool [ABCD] v /.test($('game-note').textContent) && !$('career-note').hidden && /^Continue · Pool [ABCD] v \S/.test($('career-note').textContent) && $('career-note').dataset.fix === $('career-note').textContent.slice(11), `the World Cup played last: the same, the one played last never moving either note; the Career tile's the career's fixture in its Pool, no year or side (My Team's box names it) (${$('game-note').textContent} / ${$('career-note').textContent})`);
   K.set(null); C.set(null); X.save();
 }
 

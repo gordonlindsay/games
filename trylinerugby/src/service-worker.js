@@ -122,6 +122,7 @@ self.addEventListener('message', event => {
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
+  if (event.request.mode === 'navigate') url.hash = '';   // a team link (1.10, README's Team Links): the page itself, from the cache offline; the fragment is the page's own to read (a browser gives a navigation's request its fragment)
   if (url.origin !== SCOPE.origin || url.search || url.hash) return;
   if (url.href === RATINGS) { event.respondWith(ratingsResponse()); return; }
   if (url.href === RESULTS) { event.respondWith(resultsResponse()); return; }

@@ -101,6 +101,7 @@ const play = (s0, s1, o) => T.newMatch(side('AAA', s0), side('BBB', s1), { halfL
 // 6. the cards and the builder
 {
   // re-pinned for the side-by-side team screen (2026-11-11): one team a side, its five bars, each of every side in the group in turn
+  D.settings().myClub = 'FAR';   // My Team's club as a fixture (1.10: a new game has no club, so Championship opens on Farnham only once it is picked)
   D.openTeams('champ');
   const PK = T.picker, side = () => $('t-side0').innerHTML, grp = PK.view(0).group, n = grp.teams.length;
   const farnham = side();

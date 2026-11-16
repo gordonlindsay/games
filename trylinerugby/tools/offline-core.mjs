@@ -34,6 +34,7 @@ assert.equal([...h.stores.values()].at(-1).size, shellAssets.length);
 await h.lifecycle('activate');
 assert(h.stores.has('other-game-shell')); assert.equal(h.stores.size, 2);
 assert.equal(await (await h.get(scope, 'navigate')).text(), fs.readFileSync(new URL('index.html', root), 'utf8'));
+for (const link of [scope + '#club=farnham', scope + 'index.html#club=FAR']) assert.equal(await (await h.get(link, 'navigate')).text(), fs.readFileSync(new URL('index.html', root), 'utf8'));   // a team link (1.10): the game from the cache, its fragment left to the page
 assert((await h.get(scope + 'game.js')).ok);
 for (const [url, mode, method] of [[scope+'game.js?v=2','cors','GET'], [scope+'saves.json','cors','GET'], ['https://example.test/games/other/','navigate','GET'], [scope+'api/score','cors','GET'], [scope+'game.js','cors','POST'], ['https://elsewhere.test/game.js','cors','GET']]) assert.equal(await h.get(url,mode,method), null, url);
 // ratings.json: network first, the cached copy offline, never part of the shell, and outliving a shell generation

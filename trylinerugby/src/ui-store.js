@@ -49,11 +49,9 @@ function storeRender() {
   const live = storeLive();
   const g = $('b-grown'), set = $('hp-settings');
   g.hidden = !live; set.classList.toggle('grown', live);    // Settings: Sound | Match Help | Grown-Ups in thirds
-  const ready = live && kidsReady();                        // a dot on Grown-Ups when Move Up to Easy is waiting there, and on the Settings box; touched only when it changes
+  const ready = live && kidsReady();                        // a dot on Grown-Ups when Move Up to Easy is waiting there (and on the Team and Settings tile: homeSetNote, src/ui-menus.js); touched only when it changes
   if (g.classList.contains('note') !== ready) { g.classList.toggle('note', ready); g.setAttribute('aria-label', ready ? 'Grown-Ups, a suggestion waiting' : 'Grown-Ups'); }
-  const hs = $('b-set');                                   // the Settings box carries the dot too
-  if (hs.classList.contains('note') !== ready) { hs.classList.toggle('note', ready); hs.setAttribute('aria-label', ready ? 'Settings, a suggestion waiting' : 'Settings'); }
-  storeMark($('b-champ'), 'champ'); storeMark($('b-career'), 'career'); storeMark($('b-comps'), 'champ');   // Continue's own lock is homeContinue's (src/ui-menus.js)
+  storeMark($('b-champ'), 'champ'); storeMark($('b-career'), 'career'); storeMark($('b-comps'), 'champ');
   const seg = [...document.querySelectorAll('.seg[data-key]')].find(g => g.dataset.key === 'diff');
   if (seg && seg.children[3]) storeMark(seg.children[3], 'hard');
   if (!storeHas('hard')) {
