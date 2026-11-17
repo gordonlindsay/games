@@ -18786,6 +18786,7 @@ function profileBoot() { if (profileFirst && profileAuto()) profileSetupOpen(); 
 function profileSetupOpen() {
   profileRun = { step:0, age:null, gender:null, level:null, club:null, nat:null, link:typeof linkPending !== 'undefined' ? linkPending : null, lookDraft:null, lookBegun:false };   // link: a team link's club (linkBoot, src/ui-menus.js), the Club step's card until a club is picked
   if (typeof linkPending !== 'undefined') linkPending = null;
+  profileFirst = false;                                    // the one time is spent: a link after this (hashchange, same tab) is asked as after any setup (linkBoot)
   profileStep(0);
 }
 const profileSetupCat = () => (profileRun ? profileCat(profileRun.age, profileRun.gender, settings.cat) || settings.cat : settings.cat);   // the team screen's category while it is the setup's Club

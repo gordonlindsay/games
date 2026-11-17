@@ -222,6 +222,12 @@ const flHeads = () => FL().cols.map(c => c.head).join();
   location.hash = '#club=farnham'; F.setFirst(true); L.boot(); F.open(); F.answer('adult'); F.answer('male'); F.answer('normal'); F.skip(); F.end(false);
   ok(H.myClub() === null, 'the link\'s club skipped on the Club step: no club');
   fresh();
+  // a first launch, the setup ended, then a link in the same tab (hashchange): asked, not parked for a setup that never opens again
+  F.setFirst(true); F.open(); ok(F.first() === false, 'the setup opened: the first launch is spent');
+  F.answer('adult'); F.answer('male'); F.answer('normal'); F.skip(); F.end(false); D.goHome();
+  location.hash = '#club=bath'; tidy.length = 0; fire('hashchange');
+  ok(L.card() && $('ln-q').textContent === 'Make Bath My Team?' && L.pending() === null && tidy.length === 1, 'a link after a first launch\'s setup, same tab: Make Bath My Team? (not swallowed)'); L.close(false);
+  fresh();
   // after the setup: Make Farnham My Team?, Change | Keep
   st.myClub = 'WIM'; D.goHome(); location.hash = '#club=FAR'; tidy.length = 0;
   ok(L.boot().id === 'FAR' && L.card() && !$('m-link').hidden && $('ln-q').textContent === 'Make Farnham My Team?' && tidy.length === 1, 'a link to another club after the setup: Make Farnham My Team?, once');
