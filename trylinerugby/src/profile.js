@@ -6,10 +6,12 @@
 
    First launch only (profileFirst: no save at all, never a save that exists, the demo, the tools or the app's copy of a save put back):
    a short setup before the home, one step a screen, each with Skip and Back (none on the first, which has nothing before it), and Done
-   at the end: Age Group, Gender, Club (the team screen in its one-side mode, pickMode 'setup': the whole ladder, My Clubs and Favourites,
-   clubs only) and Your Look (New Player's builder: src/ui-career.js, lookFor 'setup'). Nothing is set until it ends, so a step skipped,
-   or every step, keeps the game's own defaults. Everyone else, and anyone later, reaches the same answers on My
-   Profile, from Change in My Team's box: the age group and gender as rows, Change Look, and My Team's Change, its old job, one press on.
+   at the end: Age Group, Gender, Difficulty (1.10: Kids | Easy | Normal | Hard, the age group's level marked), Club (the team screen in its
+   one-side mode, pickMode 'setup': the whole ladder, My Clubs and Favourites, clubs only, opened on its Filter at the top with nothing
+   chosen, or on a team link's club: 1.10) and Your Look (New Player's builder: src/ui-career.js, lookFor 'setup'). Nothing is set until it
+   ends, so a step skipped, or every step, keeps the game's own defaults, and a Club skipped is no club (1.10). Everyone else, and anyone later, reaches the same answers on My
+   Profile, from Change on Team and Settings' Team tab (My Team's row): the age group and gender as rows, Change Look, and My Team's Change,
+   its old job, one press on.
 
    What an answer sets (profileCat, profileLevel), once, when it is given: nothing locks, and the level and My Team stay changeable as
    ever without rewriting the age group or the gender. The two answers are changed in Settings too, under Difficulty (profileSettings,
@@ -33,7 +35,16 @@ const PROFILE_AGES = [{ id:'mini', name:'Mini', line:'Up to ' + MIXED_THROUGH, k
 const PROFILE_GENDERS = [{ id:'male', name:'Male', k:'#4fd1c5' }, { id:'female', name:'Female', k:'#ff8466' }, { id:'na', name:'Not Say', k:'#c58cff' }];   // colours of their own, none an age group's, so no card seems to belong with one on the step before
 const PROFILE_BODIES = ['Male', 'Female'];                 // Your Look's Body row, for Not Say (or no gender): look.g 0 or 1
 const PROFILE_NUM = 5;                                      // the shirt that wears your look in a match: the fly-half, at the heart of the play (traits.js names the sevens shirts)
-const PROFILE_STEPS = [{ id:'age', title:'Age Group' }, { id:'gender', title:'Gender' }, { id:'club', title:'Pick Your Club' }, { id:'look', title:'Your Look' }];
+const PROFILE_STEPS = [{ id:'age', title:'Age Group' }, { id:'gender', title:'Gender' }, { id:'level', title:'Difficulty' }, { id:'club', title:'Pick Your Club' }, { id:'look', title:'Your Look' }];
+const profileAt = id => PROFILE_STEPS.findIndex(s => s.id === id);   // a step's place by its name, so Back, Skip and the dots follow the order
+/* The setup's Difficulty (1.10, the owner, 2026-11-16: "Difficulty level needs setting at the start too"; on the mock-ups, Build With Hard):
+   Kids | Easy | Normal | Hard, the Difficulty row's four in its order (kidsSegSet's index), in equal quarters. Every level on one ground
+   (the pitch's --rule-hi) with chalk balls, so no level reads as an age group's card: the count of balls carries the level, one to four.
+   Hard carries the game's lock on the free tier and opens the Unlock card (storeGate('hard')), as the Difficulty row's Hard does. */
+const PROFILE_LEVELS = [{ id:'kids', name:'Kids', n:1, k:'var(--rule-hi)' }, { id:'easy', name:'Easy', n:2, k:'var(--rule-hi)' }, { id:'normal', name:'Normal', n:3, k:'var(--rule-hi)' }, { id:'hard', name:'Hard', n:4, k:'var(--rule-hi)' }];
+/* The level an age group suggests, marked and focused as the step opens until one is picked: Mini Kids, Junior Easy, Adult (or no age
+   group) Normal. Skip keeps it: the age group sets it as ever (profileSet). */
+const profileSuggest = age => PROFILE_LEVELS[profileLevel(age) ?? 2].id;
 const profileKnows = (list, v) => list.some(o => o.id === v);
 /* A look as the profile keeps it: careerLook's (src/career.js) fields and checks, the body by the gender (Not Say, or none: its own,
    Male unless it says Female). */
@@ -72,7 +83,7 @@ const profileLevel = age => (age === 'mini' ? 0 : age === 'junior' ? 1 : age ===
 /* An age group and a gender given: the level and the category they set, then then(). It switches at once, with no grown-up check (the
    owner, 2026-11-14: kids.js); only a Mini leaving Mini is asked Leave Minis? first (minisAsk), and Keep Minis sets nothing. */
 function profileSet(age, gender, o) {
-  const lvl = o && o.level === false ? null : profileLevel(age), cat = profileCat(age, gender, settings.cat);
+  const lvl = o && o.level === false ? null : o && typeof o.level === 'number' ? o.level : profileLevel(age), cat = profileCat(age, gender, settings.cat);
   const go = () => {
     if (lvl != null) kidsSegSet(lvl);
     if (cat) settings.cat = cat;
@@ -124,7 +135,15 @@ function profileFigure(x, s, hair) {
   const hairs = { short:'M-7 -54 Q-6 -62 0 -62 Q6 -62 7 -54 Q3 -57 0 -57 Q-3 -57 -7 -54Z', tail:'M-7 -54 Q-6 -62 0 -62 Q6 -62 7 -54 Q3 -57 0 -57 Q-3 -57 -7 -54Z M5 -58 Q15 -56 12 -42 Q10 -49 6 -51Z' };
   return `<g transform="translate(${x} 64) scale(${s})"><circle cx="0" cy="-52" r="7"/><path d="${hairs[hair]}"/><path d="M-10 -42 Q0 -45 10 -42 L18 -33 L13 -28 L9 -32 L9 -19 L-9 -19 L-9 -32 L-13 -28 L-18 -33Z"/><path d="M-9 -20 H9 L10 -11 H2 L0 -14 L-2 -11 H-10Z"/><path d="M-8 -12 h5 v11 h-5z M3 -12 h5 v11 h-5z"/></g>`;
 }
+/* A level's picture: a real pile of the game's ball (its -35 degree lie, the laces in the ground's colour), each ball as wide as a figure:
+   one; two side by side; two with one on top; and Hard's, one more on top of that. The bottom row sits on the figures' foot line (y 63).
+   Every level's picture has the one viewBox, tall enough for Hard's pile, so a ball is the same size on all four cards. */
+const PROFILE_BALL_AT = { 1:[[24, 48]], 2:[[7, 48], [41, 48]], 3:[[7, 48], [41, 48], [24, 24]], 4:[[7, 48], [41, 48], [24, 24], [24, 0]] };
+function profileBalls(n) {
+  return PROFILE_BALL_AT[n].map(([x, y]) => `<g transform="translate(${x} ${y}) rotate(-35)"><ellipse rx="20" ry="11.8" stroke="var(--k)" stroke-width="2.5"/><path d="M-9 0h18M-4.5 -3.8v7.6M0 -3.8v7.6M4.5 -3.8v7.6" fill="none" stroke="var(--k)" stroke-width="2.6" stroke-linecap="round"/></g>`).join('');
+}
 function profilePic(kind, o) {
+  if (kind === 'level') return `<svg viewBox="-13 -16 74 82" aria-hidden="true">${profileBalls(o.n)}</svg>`;
   const body = kind === 'age' ? profileFigure(24, o.h, 'short') : o.id === 'na' ? profileFigure(14, 0.78, 'short') + profileFigure(35, 0.78, 'tail') : profileFigure(24, 1, o.id === 'female' ? 'tail' : 'short');
   return `<svg viewBox="0 0 48 66" aria-hidden="true">${body}</svg>`;
 }
@@ -161,27 +180,38 @@ const profileAuto = () => {                                // a person's first l
 /* boot.js asks this as the game starts: the setup, only with no save at all and only for a person. */
 function profileBoot() { if (profileFirst && profileAuto()) profileSetupOpen(); }
 function profileSetupOpen() {
-  profileRun = { step:0, age:null, gender:null, club:null, nat:null, lookDraft:null, lookBegun:false };
+  profileRun = { step:0, age:null, gender:null, level:null, club:null, nat:null, link:typeof linkPending !== 'undefined' ? linkPending : null, lookDraft:null, lookBegun:false };   // link: a team link's club (linkBoot, src/ui-menus.js), the Club step's card until a club is picked
+  if (typeof linkPending !== 'undefined') linkPending = null;
+  profileFirst = false;                                    // the one time is spent: a link after this (hashchange, same tab) is asked as after any setup (linkBoot)
   profileStep(0);
 }
 const profileSetupCat = () => (profileRun ? profileCat(profileRun.age, profileRun.gender, settings.cat) || settings.cat : settings.cat);   // the team screen's category while it is the setup's Club
-const profileSetupClub = () => (profileRun && profileRun.club) || myClubTeam();
+/* The setup's Club opens on the club picked (coming back to it), else a team link's (#club=farnham: linkBoot, src/ui-menus.js), on its card
+   with Pick Farnham; else on nothing: the Filter at its top (1.10: no club is ever offered by default). */
+const profileSetupClub = () => (profileRun ? profileRun.club || profileRun.link : null) || null;
 function profileStep(i, focus) {
   const R = profileRun; if (!R) return;
   R.step = clamp(i, 0, PROFILE_STEPS.length - 1);
   const st = PROFILE_STEPS[R.step];
-  if (st.id === 'club') { openTeams('setup'); profileFocus(null, pickEl(0, 'pick')); return; }   // from the keyboard on the card, so the arrow keys step the clubs and Enter picks (the team screen's own keys)
+  if (st.id === 'club') {
+    openTeams('setup');
+    if (profileSetupClub()) { profileFocus(null, pickEl(0, 'pick')); return; }   // from the keyboard on the card, so the arrow keys step the clubs and Enter picks (the team screen's own keys)
+    const dev = typeof lastDev !== 'undefined' && lastDev !== 'touch' ? lastDev : 'touch';
+    pickFilter(0, '', { dev:dev === 'kb' ? 'kb' : dev === 'pad' ? 'pad' : 'touch', from:'sheet', top:true });   // nothing to open on: the Filter at its top, in the step (Search Clubs, then Area | Country | League | Clubs)
+    return;
+  }
   if (st.id === 'look') {
     if (!R.lookDraft) R.lookDraft = profileLookStart(R.gender);
     careerLookOpen('setup');
     return;
   }
-  const opts = st.id === 'age' ? PROFILE_AGES : PROFILE_GENDERS, now = R[st.id];
+  const opts = st.id === 'age' ? PROFILE_AGES : st.id === 'level' ? PROFILE_LEVELS : PROFILE_GENDERS, now = st.id === 'level' ? R.level || profileSuggest(R.age) : R[st.id];   // the level the age group suggests is the card marked, until one is picked
+  $('su-opts').classList.toggle('su-lvl', st.id === 'level');   // the levels: four quarters, chalk balls
   $('su-step').innerHTML = profileDots(R.step);
   $('su-title').textContent = st.title;
   $('su-back').disabled = !R.step;                       // nothing before the first step: its slot kept empty (the title stands where it does on every step), and Skip the one way on
   $('su-opts').innerHTML = opts.map(o => `<button class="btn su-opt" data-v="${o.id}" aria-pressed="${o.id === now}" style="--k:${o.k}"><span class="su-pic">${profilePic(st.id, o)}</span><span class="su-word">${esc(o.name)}</span>${o.line ? `<span class="su-line">${esc(o.line)}</span>` : ''}</button>`).join('');
-  for (const b of $('su-opts').querySelectorAll('[data-v]')) b.addEventListener('click', () => profileAnswer(b.dataset.v));
+  for (const b of $('su-opts').querySelectorAll('[data-v]')) { b.addEventListener('click', () => profileAnswer(b.dataset.v)); if (b.dataset.v === 'hard' && typeof storeMark === 'function') storeMark(b, 'hard'); }   // Hard: the game's lock on the free tier
   showScreen('s-setup'); $('s-setup').scrollTop = 0;
   profileFocus($('s-setup'), focus || DEFAULT_FOCUS['s-setup']());
 }
@@ -201,7 +231,13 @@ DEFAULT_FOCUS['s-setup'] = () => ($('su-opts').querySelector && ($('su-opts').qu
 function profileAnswer(v) {
   const R = profileRun; if (!R) return;
   const st = PROFILE_STEPS[R.step];
-  if (st.id === 'age' && profileKnows(PROFILE_AGES, v)) R.age = v;
+  if (st.id === 'age' && profileKnows(PROFILE_AGES, v)) { if (R.age !== v) R.level = null; R.age = v; }   // a new age group: its own level suggested again, a level picked for the old one cleared
+  else if (st.id === 'level' && profileKnows(PROFILE_LEVELS, v)) {
+    const go = () => { if (profileRun !== R) return; R.level = v; profileStep(R.step + 1); };
+    if (v === 'hard' && !storeGate('hard', () => profileAnswer(v))) return;   // Hard is in the Full Game: the Unlock card, and the step as it was
+    if (R.age === 'mini' && v !== 'kids') { minisAsk(go); return; }   // a Mini off Kids is asked Leave Minis?, as on the Difficulty row; Keep Minis: the step as it was, Kids marked
+    go(); return;
+  }
   else if (st.id === 'gender' && profileKnows(PROFILE_GENDERS, v)) { if (R.lookDraft && R.gender !== v) R.lookDraft = profileLookClean(R.lookDraft, v); R.gender = v; }
   else return;
   profileStep(R.step + 1);
@@ -222,7 +258,7 @@ function profileBack() {                                   // the step before, i
 function profileClubPick(t, group) {
   const R = profileRun; if (!R || !t || t.act) return;
   R.club = t; R.nat = profileNatOf(t, group);
-  profileStep(3);
+  profileStep(profileAt('look'));
 }
 /* Done (withLook) or Skip on Your Look: every answer given is set, then the home. */
 function profileSetupEnd(withLook) {
@@ -230,8 +266,9 @@ function profileSetupEnd(withLook) {
   profileRun = null;
   if (R.club) { settings.myClub = keyOf(R.club); if (R.nat) settings.myNat = R.nat; }
   profile.look = withLook && R.lookDraft ? profileLookClean(R.lookDraft, R.gender) : null;
-  if (R.age || R.gender) profileSet(R.age, R.gender, { then:() => goHome() });
-  else { profile.age = profile.gender = null; save(); goHome(); }
+  const lvl = R.level ? PROFILE_LEVELS.findIndex(o => o.id === R.level) : null;   // the level picked (the Difficulty row's index), else the age group's (Skip)
+  if (R.age || R.gender) profileSet(R.age, R.gender, { level:lvl, then:() => goHome() });
+  else { if (lvl != null) kidsSegSet(lvl); profile.age = profile.gender = null; save(); goHome(); }
 }
 $('su-back').addEventListener('click', profileBack);
 $('su-skip').addEventListener('click', profileSkip);
@@ -239,7 +276,7 @@ $('su-skip').addEventListener('click', profileSkip);
 /* ---------- My Profile: the same answers, changed one at a time ---------- */
 let profileLook = null;                                    // the look Your Look is editing from My Profile, kept as each pick is made
 const profileLookDraft = () => (profileRun ? profileRun.lookDraft : profileLook);   // Your Look's look, in its setup and profile modes (src/ui-career.js)
-const profileLookClub = () => (profileRun ? profileSetupClub() : myClubTeam());
+const profileLookClub = () => (profileRun ? profileRun.club : myClubTeam()) || null;   // the club the look stands in: the setup's picked club (never a link's not picked), or My Team's; none, a plain kit (lookClub, src/ui-career.js)
 const profileLookGender = () => (profileRun ? profileRun.gender : profile.gender);
 /* A pick on Your Look (src/ui-career.js): on My Profile it is kept at once, as Settings' rows are. In the setup the look is begun, so
    Skip goes from the top and Done (or Back) is the way on: a child who has picked a hair style and then taps Skip keeps it. */
@@ -258,11 +295,12 @@ function profileOpen(focus) {
 }
 DEFAULT_FOCUS['s-profile'] = () => ($('pf-age').querySelector && $('pf-age').querySelector('[aria-pressed="true"]')) || $('pf-back');
 function profileRender() {
-  const c = myClubTeam(), n = myNatTeam(null);
+  const club = myClubTeam(), c = club || MY_PLAIN, n = myNatTeam(null);   // no club (1.10): the row reads Pick Your Club, the look in a plain kit
   profileSeg('pf-age', PROFILE_AGES, profile.age, true);
   profileSeg('pf-gender', PROFILE_GENDERS, profile.gender, false);
-  $('pf-club').innerHTML = `${jersey(c)}<span class="pf-names"><b>${esc(listName(c))}</b><span>${esc(listName(n))}</span></span>`;
-  $('pf-team').setAttribute('aria-label', 'Change My Team: ' + listName(c) + ', ' + listName(n));
+  $('pf-club').innerHTML = `${jersey(c)}<span class="pf-names"><b>${esc(club ? listName(c) : 'My Team')}</b><span>${esc(listName(n))}</span></span>`;
+  $('pf-team').textContent = club ? 'Change' : 'Pick Your Club';   // no club: My Team, and Pick Your Club, as on the home's box
+  $('pf-team').setAttribute('aria-label', club ? 'Change My Team: ' + listName(c) + ', ' + listName(n) : 'Pick Your Club');
   const drawn = profileDraw($('pf-cv'), c, profile.look);
   $('pf-cv').hidden = !drawn; $('pf-shirt').hidden = drawn;
   if (!drawn) $('pf-shirt').innerHTML = jersey(c, 'big');

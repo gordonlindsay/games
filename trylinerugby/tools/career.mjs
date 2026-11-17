@@ -837,10 +837,11 @@ C.setCups(false);                                    // no cups unless a section
   ok($('career-note').hidden, 'home: the Career box with no note before a career starts');
   const cr = C.create({ name:'Isla', pos:'B', num:7, club:{ id:'XSS', name:'<img src=x>', kit:'#123456', trim:'#abcdef', custom:true, pace:3, power:3, handling:3, kicking:3 } });
   C.set(cr); X.renderHome();
-  ok($('career-note').hidden && /^Career · Round 1 v /.test($('cont-note').textContent), 'with one and nothing else under way: Continue says it (Career · Round 1 v ...), so the box keeps no note of its own');
+  ok(!$('career-note').hidden && /^Continue · Round 1 v /.test($('career-note').textContent) && $('game-note').textContent === 'Quick Match', 'with one and nothing else under way: the Career tile\'s own note says it (Continue · Round 1 v ...; 1.10, Continue having left the home), Game\'s still Quick Match');
   T.debug.settings().last = 'champ'; X.newChamp(X.NATIONS[0], X.NATIONS.slice(1, 6)); X.renderHome();
   { const f = C.ahead(cr), opp = f.teams[f.home === f.user ? f.away : f.home].name, safe = opp.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    ok(!$('career-note').hidden && $('career-note').textContent === 'Round 1 v ' + opp && $('career-note').innerHTML === `<span class="nw">Round 1</span> <span class="nw">v ${safe}</span>` && !/img/.test($('career-note').innerHTML), `with a championship on Continue: the Career box's note, its fixture (Round 1 v ${opp}) in its parts, with no year and no club (My Team's box names it), so the club's name never reaches it unescaped`); }
+    const menusSrc = fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8');
+    ok(!$('career-note').hidden && $('career-note').textContent === 'Continue · Round 1 v ' + opp && $('career-note').dataset.fix === 'Round 1 v ' + opp && /^Continue · /.test($('game-note').textContent) && /function homeNoteSet\(el, fix, plain\) \{\s*if \(fix\) \{ el\.dataset\.fix = fix; el\.textContent = 'Continue · ' \+ fix; \}/.test(menusSrc) && !/career-note'\)\.innerHTML|note\.innerHTML/.test(menusSrc + fs.readFileSync(new URL('../src/ui-career.js', import.meta.url), 'utf8')) && safe !== opp === /[&<>]/.test(opp), `with a championship too (on Game's note): the Career tile's note, its fixture (Continue · Round 1 v ${opp}) with no year and no club (My Team's box names it), written as text, never markup, so the club's name never reaches it unescaped`); }
   X.setChamp(null);
   // the new player screen, and his club
   C.set(null); C.newOpen();

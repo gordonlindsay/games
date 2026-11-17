@@ -223,11 +223,12 @@ function navLayer() {                                      // the top layer: the
 }
 function navCands(layer) {
   const out = [];
-  for (const el of layer.querySelectorAll('.btn, .team, .seg button, .sw, .step, summary, .app-action, .fl-r')) {   // .fl-r: the team screen's Filter's rows (src/ui-menus.js)
+  for (const el of layer.querySelectorAll('.btn, .team, .seg button, .sw, .step, summary, .app-action, .fl-r, .my-box[role="button"]')) {   // .fl-r: the team screen's Filter's rows; the home's My Team box, one button (src/ui-menus.js)
     if (el.disabled || el.hidden || el.getAttribute('aria-disabled') === 'true' || (el.closest && el.closest('[hidden]'))) continue;
     const r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
     out.push(el);
   }
+  if (layer.id === 'm-filter' && layer.classList && layer.classList.contains('fl-embed')) for (const id of ['t-sback', 't-skip']) { const b = $(id); if (b && !b.hidden && b.getBoundingClientRect().width) out.push(b); }   // the setup's Club holds its Filter in the step: the step's Back and Skip are in reach (src/ui-menus.js)
   return out;
 }
 function setFocus(el) {
@@ -236,7 +237,7 @@ function setFocus(el) {
   if (focusEl) { focusEl.classList.add('padfocus'); if (focusEl.scrollIntoView) focusEl.scrollIntoView({ block:'nearest' }); }
   if (typeof pickHint === 'function') pickHint();          // the team screen's hint for the lift follows the ring (src/ui-menus.js)
 }
-const DEFAULT_FOCUS = { 's-home':() => $('b-continue'), 's-join':() => $('j-go'), 'm-pen':() => ($('p-goal').disabled ? $('p-touch') : $('p-goal')), 'm-break':() => $('br-go'), 'm-pause':() => $('pz-resume') };
+const DEFAULT_FOCUS = { 's-home':() => $('b-match'), 's-join':() => $('j-go'), 'm-pen':() => ($('p-goal').disabled ? $('p-touch') : $('p-goal')), 'm-break':() => $('br-go'), 'm-pause':() => $('pz-resume') };
 let navOnly = null;                                        // two player: the one seat that may act on the top layer (the team pick, the penalty card), or null for either
 function navOwner(seat) { return (M && M.paused) || navOnly == null || seat == null || seat === navOnly; }   // the pause card is anyone's, whatever card it covers
 function navSide(seat) {                                   // the one button a restricted seat may still press: none since the team screen gave each seat its own side (2026-11-11)

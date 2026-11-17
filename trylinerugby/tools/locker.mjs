@@ -526,7 +526,7 @@ function champAt4(userWins) {
       && [...mr, ...wr].filter(t => t.off).every(t => t.label === 'Locked, ' + t.need + ' Gold ' + (t.need === 1 ? 'Medal' : 'Medals')) && !/undefined|NaN/.test(body),
       `${g} Golds: Men ${won(mr).length} won, padlocks at ${needs(mr).join(' ') || 'none'}; Women ${won(wr).length} won, padlocks at ${needs(wr).join(' ') || 'none'}`);
   }
-  $('lk-back').click(); ok(!$('s-home').hidden && $('s-locker').hidden, 'Back to Menu goes home');
+  $('lk-back').click(); ok(!$('s-home').hidden && $('s-locker').hidden, 'Back to Team goes home (Team and Settings\' Team tab, where its row is)');
   // full time across Gold 5 and Gold 6: the New Legends line names each new Gold's sides, a women's one only while there is one
   for (const [before, names] of [[4, ['England 2003', 'England 2025 Women']], [5, ['South Africa 2007']]]) {
     golds(before); const feats = L.FEATS.filter(f => f.id !== 'star');            // the fifth and sixth non-star feats: Golden Try, Comeback
@@ -542,8 +542,8 @@ function champAt4(userWins) {
     D.exitMatch();
   }
   fresh();
-  ok(/<div class="my-acts" id="my-acts">\s*<button class="btn" id="b-my">Change<\/button>\s*<button class="btn im-home" id="b-import" hidden>Add Your Team<\/button>\s*<button class="btn lk-home" id="b-locker">Locker<\/button>\s*<\/div>/.test(html), 'the home button reads Locker, in My Team\'s box beside Change and Add Your Team (the home, ui-menus.js)');
-  ok(/id="lk-back" data-back>Back to Menu</.test(html) && /<div class="seg lk-tabs" id="lk-tabs"><button>Medals<\/button><button>Ball<\/button><button>Boots<\/button><button>Legends<\/button><\/div>/.test(html), 'Back to Menu is the Back button (a pad\'s B, Android\'s Back); the tabs are Title Case');
+  ok(/<div class="ts-row ts-my">[\s\S]*?<button class="btn" id="b-my">Change<\/button><\/div>\s*<button class="btn ts-row im-home" id="b-import" hidden>Add Your Team<\/button>\s*<button class="btn ts-row lk-home" id="b-locker">Locker<\/button>/.test(html) && !/my-acts/.test(html), 'the home button reads Locker, a row on Team and Settings\' Team tab under My Team\'s Change and Add Your Team (1.10: off the home\'s box, ui-menus.js)');
+  ok(/id="lk-back" data-back>Back to Team</.test(html) && /<div class="seg lk-tabs" id="lk-tabs"><button>Medals<\/button><button>Ball<\/button><button>Boots<\/button><button>Legends<\/button><\/div>/.test(html), 'Back to Team is the Back button (a pad\'s B, Android\'s Back); the tabs are Title Case');
   ok(![src, css].some(s => /[\u2014\u2190-\u21ff]/.test(s)), 'no em dash and no arrow in the Locker\'s code or styles');
 }
 
@@ -718,24 +718,24 @@ async function browserChecks() {
       const rows = await page.evaluate(() => {
         const T = window.__tryline, X = T.teams, out = [], $ = id => document.getElementById(id);
         const box = el => el.getBoundingClientRect(), vis = el => !!el && !el.hidden && !el.closest('[hidden]') && box(el).width > 0;
-        for (const desk of [false, true]) for (const app of [false, true]) for (const busy of [false, true]) for (const step of [null, 'match', 'champ', 'drills', 'settings']) {
+        for (const desk of [false, true]) for (const app of [false, true]) for (const busy of [false, true]) for (const step of [null, 'match', 'champ', 'drills', 'settings', 'team']) {
           T.store.setNative(app); T.store.setStarted(app); if (app) T.store.setBought(['tryline.full']);
           if (busy) { X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); T.career.start({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0] }); } else { X.setChamp(null); T.career.set(null); }
-          document.body.classList.toggle('desk', desk); T.debug.goHome(); if (step) T.home.open(step);
-          const s = $('s-home'), lk = $('b-locker'), r = box(lk), my = box($('my-box')), acts = box($('my-acts'));
+          document.body.classList.toggle('desk', desk); T.debug.goHome(); if (step) T.home.open(step === 'team' ? 'settings' : step, null, step === 'team' ? 'team' : 'game');
+          const s = $('s-home'), lk = $('b-locker'), r = box(lk), list = box(document.querySelector('#ts-team .ts-list'));
           const others = [...s.querySelectorAll('button')].filter(b => b !== lk && vis(b));
           const overlap = others.some(b => { const q = box(b); return q.left < r.right && q.right > r.left && q.top < r.bottom && q.bottom > r.top; });
           const pair = (a, b) => { const p = box($(a)), q = box($(b)); return Math.abs(p.width - q.width) < 1.5 && Math.abs(p.top - q.top) < 1 && Math.abs(p.height - q.height) < 1.5 && p.height >= 44; };
           out.push({ state:(desk ? 'desk' : 'phone') + (app ? '+app' : '') + (busy ? '+busy' : '') + '+' + (step || 'boxes'), fits:s.scrollHeight <= s.clientHeight + 1 && s.scrollWidth <= s.clientWidth,
-            lk:step ? !vis(lk) : vis(lk) && r.height >= 44 && r.width >= 44 && r.bottom <= innerHeight && r.left >= 0 && r.top >= my.top && r.bottom <= my.bottom && r.top >= acts.top - 0.5 && r.bottom <= acts.bottom + 0.5, overlap,
-            rows:step ? true : pair('b-match', 'b-career') && pair('b-drills', 'b-set') && Math.abs(box($('b-continue')).left - box($('b-match')).left) < 1 && Math.abs(box($('b-continue')).right - box($('b-career')).right) < 1 });
+            lk:step !== 'team' ? !vis(lk) : vis(lk) && r.height >= 48 && r.width >= 44 && r.bottom <= innerHeight && r.left >= 0 && r.top >= list.top - 0.5 && r.bottom <= list.bottom + 0.5, overlap,
+            rows:step ? true : pair('b-match', 'b-career') && pair('b-drills', 'b-set') && Math.abs(box($('b-match')).height - box($('b-drills')).height) < 1.5 && Math.abs(box($('b-match')).left - box($('b-drills')).left) < 1 && !$('b-continue') });
         }
         X.setChamp(null); T.career.set(null); document.body.classList.remove('desk'); T.store.setNative(false); T.store.setStarted(false); T.debug.goHome();
         return out;
       });
-      ok(rows.length === 40 && rows.every(r => r.fits), `${w}x${h}: the home fits without a scroll in every state, on the boxes and every step (${rows.filter(r => !r.fits).map(r => r.state).join(', ') || 'all forty'})`);
-      ok(rows.every(r => r.lk && !r.overlap), `${w}x${h}: Locker is in My Team's box with Change and Add Your Team, on screen, at least 44px, touching no other button, in every state, and put away with the box on a step (${rows.filter(r => !r.lk || r.overlap).map(r => r.state).join(', ') || 'all'})`);
-      ok(rows.every(r => r.rows), `${w}x${h}: the five boxes balanced, Continue across the top, Match | Career and Skill Games | Settings equal and level, 44px at least, in every state (${rows.filter(r => !r.rows).map(r => r.state).join(', ') || 'all'})`);
+      ok(rows.length === 48 && rows.every(r => r.fits), `${w}x${h}: the home fits without a scroll in every state, on the tiles, every step and each of Team and Settings' tabs (${rows.filter(r => !r.fits).map(r => r.state).join(', ') || 'all forty-eight'})`);
+      ok(rows.every(r => r.lk && !r.overlap), `${w}x${h}: Locker is a row of Team and Settings' Team tab, in its card with Change and Add Your Team, on screen, 48px, touching no other button, in every state, and put away everywhere else (${rows.filter(r => !r.lk || r.overlap).map(r => r.state).join(', ') || 'all'})`);
+      ok(rows.every(r => r.rows), `${w}x${h}: the four tiles balanced in two even rows, Game | Career and Skill Games | Team and Settings equal and level, 44px at least, no Continue (1.10), in every state (${rows.filter(r => !r.rows).map(r => r.state).join(', ') || 'all'})`);
       // the Locker: each tab with nothing, some and everything earned
       const tabs = await page.evaluate(() => {
         const L = window.__tryline.locker, out = [];
@@ -926,18 +926,18 @@ async function browserChecks() {
         for (const desk of [false, true]) for (const app of [false, true]) for (const busy of [false, true]) {
           T.store.setNative(app); T.store.setStarted(app); if (app) T.store.setBought(['tryline.full']);
           if (busy) { X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); T.career.start({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0] }); } else { X.setChamp(null); T.career.set(null); }
-          document.body.classList.toggle('desk', desk); T.debug.goHome();
-          const s = document.getElementById('s-home'), lk = document.getElementById('b-locker'), r = box(lk);
+          document.body.classList.toggle('desk', desk); T.debug.goHome(); T.home.open('settings', null, 'team');   // 1.10: the Locker and the Trophy Cabinet are rows of Team and Settings' Team tab
+          const s = document.getElementById('s-home'), lk = document.getElementById('b-locker'), r = box(lk), panel = document.getElementById('ts-team');
           const others = [...s.querySelectorAll('button')].filter(b => b !== lk && vis(b));
           const overlap = others.some(b => { const q = box(b); return q.left < r.right && q.right > r.left && q.top < r.bottom && q.bottom > r.top; });
           const withIt = s.scrollHeight; lk.style.display = 'none'; const without = s.scrollHeight; lk.style.display = '';
-          out.push({ state:(desk ? 'desk' : 'phone') + (app ? '+app' : '') + (busy ? '+busy' : ''), cab:vis(document.getElementById('b-cabinet')), grow:withIt - without, scroll:withIt - s.clientHeight,
+          out.push({ state:(desk ? 'desk' : 'phone') + (app ? '+app' : '') + (busy ? '+busy' : ''), cab:vis(document.getElementById('b-cabinet')), grow:withIt - without, scroll:Math.max(withIt - s.clientHeight, panel.scrollHeight - panel.clientHeight),
             lk:vis(lk) && r.height >= 44 && r.width >= 44 && r.bottom <= innerHeight && r.left >= 0, overlap });
         }
         X.setChamp(null); T.career.set(null); document.body.classList.remove('desk'); T.store.setNative(false); T.store.setStarted(false); T.debug.goHome();
         return out;
       });
-      ok(cab.length === 8 && cab.every(r => r.cab && r.grow <= 0 && r.scroll <= 0), `${w}x${h}: with a Trophy Cabinet the Locker adds no height and the home does not scroll, in every state (${json(cab.map(r => [r.state, r.grow, r.scroll]))})`);
+      ok(cab.length === 8 && cab.every(r => r.cab && r.grow <= 0 && r.scroll <= 0), `${w}x${h}: with a Trophy Cabinet (its row on the Team tab) the Locker adds no height and neither the home nor the tab scrolls, in every state (${json(cab.map(r => [r.state, r.grow, r.scroll]))})`);
       ok(cab.every(r => r.lk && !r.overlap), `${w}x${h}: and Locker is on screen, at least 44px, touching no other button`);
       ok(!errors.length, `${w}x${h}: no page errors (${errors.join('; ')})`);
       await ctx.close();

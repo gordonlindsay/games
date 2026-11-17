@@ -219,7 +219,7 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
 
 // 4. The ladder, the card's head and the Filter (the owner's layout, 14 Nov: Build)
 {
-  s.myClub = null; s.pick = [null, null]; s.fav = []; s.recent = [[], []]; X.setChamp(null);
+  s.myClub = 'FAR'; s.pick = [null, null]; s.fav = []; s.recent = [[], []]; X.setChamp(null);   // Farnham as My Team's club, a fixture (1.10: a new game has no club; the Filter's top with none is tools/links.mjs')
   const eng = P.clubGroups('ENG'), keys = eng.map(g => g.key);
   ok(keys.join() === ['eng', 'en2', 'sur', ...counties.filter(l => l.key !== 'sur').map(l => l.key)].join() && counties.slice(1).every((l, i, a) => i === 0 || a[i - 1].county.localeCompare(l.county, 'en') < 0), `England: the Premiership, the Championship, Surrey, then every other county A to Z (${keys.slice(0, 6).join()}...)`);
   const sur = eng.find(g => g.key === 'sur'), ham = eng.find(g => g.key === 'ham');
@@ -266,19 +266,22 @@ const counties = X.TEAM_LISTS.filter(l => l.county);
   const wide = [];
   for (const t of [...new Set(counties.flatMap(l => P.clubGroups('ENG').find(g => g.list === l.key).teams))]) { const [me, op] = opp(t.id); if (Math.abs(X.overallOf(me) - X.overallOf(op)) >= 9) wide.push(`${me.name} ${X.overallOf(me)} v ${op.name} ${X.overallOf(op)}`); }
   ok(!wide.length, `no county club's Opponent opens 9 or more from it (${wide.slice(0, 4).join('; ') || 'none'})`);
-  s.myClub = null; s.pick = [null, null]; D.goHome();
+  s.myClub = 'FAR'; s.pick = [null, null]; D.goHome();
 }
 
 // 5. The home's Local tier: your county | Other County | My League; Other County on the Filter's County | Teams
 {
   const mine = (club, league) => { s.myClub = club; I.setLeague(league || null); return H.comps(2); };
-  ok(json(mine(null)) === json([['sur', 'Surrey'], ['county', 'Other County']]), 'Farnham\'s: Surrey | Other County');
-  ok(json(mine(null, { teams:[] })) === json([['sur', 'Surrey'], ['county', 'Other County'], ['my', 'My League']]), 'with a league imported: Surrey | Other County | My League');
+  ok(json(mine('FAR')) === json([['sur', 'Surrey'], ['county', 'Other County']]), 'Farnham\'s: Surrey | Other County');
+  ok(json(mine('FAR', { teams:[] })) === json([['sur', 'Surrey'], ['county', 'Other County'], ['my', 'My League']]), 'with a league imported: Surrey | Other County | My League');
+  // 1.10: no club, no county of yours: Pick Your County in their place (the owner: no Farnham, nor its Surrey, unless a link says so)
+  ok(!s.myClubLegacy && json(mine(null)) === json([['county', 'Pick Your County']]) && LO.myCounty() === null, 'no club: Pick Your County alone, no Surrey');
+  ok(json(mine(null, { teams:[] })) === json([['county', 'Pick Your County'], ['my', 'My League']]), 'no club, a league imported: Pick Your County | My League');
   ok(mine('TWE')[0].join() === 'ken,Kent' && mine('ALD')[0].join() === 'ham,Hampshire' && mine('SCU')[0].join() === 'nld,Notts Lincs & Derbyshire', 'My Team\'s club\'s county (Tunbridge Wells: Kent; Aldershot: Hampshire)');
   ok(mine('BTH')[0][0] === 'sur' && mine('GLA')[0][0] === 'sur', 'a professional side has no county: Surrey');
   X.restore({ custom:[{ key:'my0', name:'My Town', id:'MYT', kit:'#123456', trim:'#abcdef', pace:3, power:3, handling:3, kicking:3, stamina:3 }] });
   ok(mine('my0')[0][0] === 'sur', 'a team you made: Surrey');
-  mine(null); X.setChamp(null); K.set(null);
+  mine('FAR'); X.setChamp(null); K.set(null);
   H.champPick('county');
   const F = P.filterState();
   ok(!$('s-teams').hidden && LO.champCounty() && F.open && F.cols.length === 2 && F.cols[0].head === 'County' && F.cols[0].rows.length === 28 && F.cols[0].rows[F.cols[0].sel].name === 'Surrey' && F.cols[1].head === 'Surrey', 'Other County: the team screen, the Filter open on County | Teams, your county marked');

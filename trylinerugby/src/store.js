@@ -129,7 +129,7 @@ function storeWallMail(c, name) {
 
 /* ---------- the Super Fan's club, first ---------- */
 const storeFanTeam = () => storeTeamOf(storeFanClub());
-const storeHomeTeam = () => storeFanTeam() || DEFAULT_TEAM;
+const storeHomeTeam = () => storeFanTeam() || null;   // the Super Fan's club, My Team's while no club is picked (a purchase is a club choice, as a team link is); null without one (1.10: no default club)
 function storeHomePool() { const t = storeFanTeam(), l = t && (listHomeOf(t) || TEAM_LISTS.find(x => x.teams.includes(t))); return l ? l.key : 'sur'; }   // the list holding the Super Fan's club (its county's, LOCAL), or Local · Surrey
 function storeFirst(list) {                // the Super Fan's club moved to the front of a team list, the rest in their order
   const t = storeFanTeam(); if (!t) return list;

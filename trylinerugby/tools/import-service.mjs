@@ -436,9 +436,11 @@ async function browserChecks() {
       const text = id => page.evaluate(i => document.getElementById(i).textContent, id);
       const shown = id => page.evaluate(i => { const e = document.getElementById(i); return !!e && !e.hidden && !e.closest('[hidden]') && e.getBoundingClientRect().width > 0; }, id);
       const size = id => page.evaluate(i => { const r = document.getElementById(i).getBoundingClientRect(); return [r.width, r.height, r.left, r.right]; }, id);
-      ok(await shown('b-import'), `${w}x${h}: the home offers Add Your Team on the web`);
-      // from the team screen, so the league it brings is there when the card closes: Play, your side's group, My League, Add Your Team
-      await page.tap('#b-continue');
+      await page.tap('#b-set'); await page.tap('#ts-tab-team');   // 1.10: Add Your Team is on Team and Settings' Team tab, with My Team's other rows
+      ok(await shown('b-import'), `${w}x${h}: the home offers Add Your Team on the web (Team and Settings' Team tab)`);
+      await page.tap('#hs-back');
+      // from the team screen, so the league it brings is there when the card closes: Game, Quick Match, your side's group, My League, Add Your Team
+      await page.tap('#b-match'); await page.tap('#b-quick');
       await page.waitForFunction(() => !document.getElementById('s-teams').hidden);
       await page.locator('#s-teams .pk-group').first().tap();
       await page.waitForFunction(() => !document.getElementById('m-filter').hidden);
@@ -496,6 +498,7 @@ async function browserChecks() {
       await page.evaluate(() => document.fonts && document.fonts.ready);
       const text = id => page.evaluate(i => document.getElementById(i).textContent, id);
       const hidden = id => page.evaluate(i => document.getElementById(i).hidden, id);
+      await page.tap('#b-set'); await page.tap('#ts-tab-team');   // Add Your Team on the Team tab (1.10)
       await page.tap('#b-import');
       await page.waitForFunction(() => !document.getElementById('m-import').hidden);
       await page.keyboard.press('Escape');

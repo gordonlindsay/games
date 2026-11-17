@@ -84,12 +84,14 @@ const careerDrawName = c => (c.id === 'tour' ? 'Series' : c.id === 'world' && c.
 /* The line under a cup's title on the hub and at its end: the cups' own (Win to Reach the Final, 2nd in Pool B · top two go through,
    Bath win the European Cup), as Championship mode's cup hub has it; nothing without the cups' screens. */
 function careerCupLine(cr) { const K = careerCups(); return cr.cup && K && K.cupLine ? K.cupLine(cr.cup) : ''; }
-/* The home's Career box: Career, and while a career is under way and Continue shows something else, its fixture (Round 2 v Bath, Transfer
-   Window: homeCareerFix, src/ui-menus.js), on two lines where the half needs them. My Team's box already names the club. */
+/* The home's Career tile: Career, and while a career is saved (1.10: always, the home's Continue having gone), Continue · and its fixture
+   (Round 2 v Bath, Transfer Window: homeCareerFix, src/ui-menus.js) on one line, fitted as Game's is (homeNotesFit). My Team's box already
+   names the club. */
 function renderCareerHome() {
   const note = $('career-note');
-  if (!career || (typeof homeUnder === 'function' && homeUnder() === 'career')) { note.hidden = true; return; }
-  homeLine(note, homeCareerFix(career));
+  if (typeof homeNoteSet === 'function') homeNoteSet(note, career ? homeCareerFix(career) : null, '');
+  else note.hidden = !career;
+  homeSay($('b-career'), 'Label', career ? 'Career, Continue · ' + homeCareerFix(career) : 'Career');   // set only when it changes (src/ui-menus.js)
 }
 
 /* ---------- the new player, and his club ---------- */
@@ -98,14 +100,16 @@ const careerSame = (a, b) => !!a && !!b && keyOf(a) === keyOf(b) && !a.custom ==
 function careerNewOpen() {
   const home = myPool() || 'sur', pool = poolTier(home) > 0 ? home : 'sur';
   const cat = typeof profileCareerCat === 'function' ? profileCareerCat() : 'men';   // the profile's gender (src/profile.js): Women for Female, Not Say following the category; Men otherwise, as ever
-  careerDraft = { club:myClubTeam(), league:pool, pool, nat:poolTier(pool) === 1 ? pool : 'eng', pos:'B', num:CAREER_POS.B[0], numsFor:null, cat, proMode:false, look:typeof profileCareerLook === 'function' ? profileCareerLook(cat) : { ...CAREER_LOOK } };   // My Team's club (the Super Fan's, or Farnham, until one is picked), changed with Change Club; Men first and picked unless the profile says Women; Whole Team first and picked: Pro Mode is the harder way; the profile's look (else the default) on the career's body, changed with Change Look
+  careerDraft = { club:myClubTeam(), league:pool, pool, nat:poolTier(pool) === 1 ? pool : 'eng', pos:'B', num:CAREER_POS.B[0], numsFor:null, cat, proMode:false, look:typeof profileCareerLook === 'function' ? profileCareerLook(cat) : { ...CAREER_LOOK } };   // My Team's club (the Super Fan's until one is picked; none at all since 1.10, until one is picked here: Pick Your Club, the Filter at its top), changed with Change Club; Men first and picked unless the profile says Women; Whole Team first and picked: Pro Mode is the harder way; the profile's look (else the default) on the career's body, changed with Change Look
   $('cn-name').value = '';
   renderCareerNew(); careerShow('s-career-new');
 }
 /* The picks change in place, so a controller's ring stays on the button it pressed; the numbers are redrawn only for a new position. */
 function renderCareerNew() {
   const d = careerDraft;
-  $('cn-mine').innerHTML = `${careerShirt(d.club, d.num)}<span class="cr-mine"><b data-fit>${esc(listName(d.club))}</b><span class="lbl" data-fit="wrap">${esc(careerLeagueName(careerLeagueKey(d.league, d.club)))}</span></span>`;   // the league, stepped down, then on two lines (United Rugby Championship)
+  if (d.club) $('cn-mine').innerHTML = `${careerShirt(d.club, d.num)}<span class="cr-mine"><b data-fit>${esc(listName(d.club))}</b><span class="lbl" data-fit="wrap">${esc(careerLeagueName(careerLeagueKey(d.league, d.club)))}</span></span>`;   // the league, stepped down, then on two lines (United Rugby Championship)
+  else $('cn-mine').innerHTML = `${careerShirt(MY_PLAIN, d.num)}<span class="cr-mine"><b data-fit>My Team</b></span>`;   // no club yet (1.10): a plain kit, and Pick Your Club beside it
+  $('cn-change').textContent = d.club ? 'Change Club' : 'Pick Your Club';
   [...$('cn-cat').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 1) === (d.cat === 'women'))));
   [...$('cn-pos').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 0) === (d.pos === 'F'))));
   [...$('cn-mode').children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 1) === d.proMode)));
@@ -127,8 +131,9 @@ function careerCatPick(i) { careerDraft.cat = i === 1 ? 'women' : 'men'; careerD
 function careerModePick(i) { careerDraft.proMode = i === 1; renderCareerNew(); }   // Play as Whole Team (0) or My Player (1): Pro Mode (career-pro.js)
 [...$('cn-mode').children].forEach((b, i) => b.addEventListener('click', () => careerModePick(i)));
 $('cn-name').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
-function careerNewGo() {                            // Start Career: the player as picked, his look included
+function careerNewGo() {                            // Start Career: the player as picked, his look included; with no club yet, the club first (Pick Your Club)
   const d = careerDraft;
+  if (!d.club) { careerClubOpen(); return false; }
   if (!careerStart({ name:$('cn-name').value, pos:d.pos, num:d.num, club:d.club, league:d.league, cat:d.cat, proMode:d.proMode, look:d.look })) return false;
   careerOpen();
   return true;
@@ -149,11 +154,11 @@ $('cn-look-go').addEventListener('click', () => careerLookOpen());
    or, for Not Say and no gender, a Body row (Male | Female) under Build. New Player's own ('career') is as it was. */
 let lookFor = 'career';
 const lookDraft = () => (lookFor === 'career' ? careerDraft && careerDraft.look : typeof profileLookDraft === 'function' ? profileLookDraft() : null);
-const lookClub = () => (lookFor === 'career' ? careerDraft.club : profileLookClub());
+const lookClub = () => (lookFor === 'career' ? careerDraft.club : profileLookClub()) || MY_PLAIN;   // no club (1.10): the look in a plain kit
 const lookBody = () => lookFor !== 'career' && !['male', 'female'].includes(profileLookGender());   // the Body row: Not Say, or no gender given
 function lookHead() {                                // the screen's words and buttons for whose look it is
   const pro = lookFor !== 'career', setup = lookFor === 'setup', eb = document.querySelector ? document.querySelector('#s-career-look .eyebrow') : null;
-  if (eb) { if (setup) eb.innerHTML = profileDots(3); else eb.textContent = pro ? 'My Profile' : 'New Player'; }
+  if (eb) { if (setup) eb.innerHTML = profileDots(profileAt('look')); else eb.textContent = pro ? 'My Profile' : 'New Player'; }   // the setup's place, by its step's name (src/profile.js)
   $('ck-back').hidden = setup; $('ck-back').textContent = pro ? 'Back to Profile' : 'Back to New Player';
   $('ck-pback').hidden = $('ck-skip').hidden = $('ck-done').hidden = !setup;
   if (setup && typeof profileLookBegun === 'function' && profileLookBegun()) $('ck-skip').hidden = true;   // a look begun: Done or Back, never Skip (src/profile.js)
@@ -190,7 +195,7 @@ $('ck-back').addEventListener('click', () => {
   if (lookFor === 'profile') { lookFor = 'career'; profileOpen($('pf-look')); return; }   // My Profile's: the picks already kept
   renderCareerNew(); careerShow('s-career-new');
 });
-$('ck-pback').addEventListener('click', () => profileStep(2));          // the setup's: back to its Club, the look kept for coming back
+$('ck-pback').addEventListener('click', () => profileStep(profileAt('club')));   // the setup's: back to its Club, the look kept for coming back
 $('ck-skip').addEventListener('click', () => profileSkip());           // the setup ends with no look (shown only while nothing has been picked)
 $('ck-done').addEventListener('click', () => profileSetupEnd(true));    // the setup ends with this look
 /* The club: the team screen in its Career mode (openTeams('career'), src/ui-menus.js), one side, centred: the ladder's clubs only (no nation,

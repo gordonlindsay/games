@@ -201,7 +201,7 @@ function playOut() {
   const html = readGameSource();
   const quick = html.indexOf('id="b-quick"'), champBtn = html.indexOf('id="b-champ"');
   ok(quick > 0 && champBtn > quick, 'Quick Match comes before Championship');
-  ok(/<button class="btn bx bx-go" id="b-continue" autofocus>[\s\S]*?<span class="bx-name" id="cont-name">Play<\/span><span class="bx-sub" id="cont-note">Quick Match<\/span>/.test(html) && /<button class="btn bx" id="b-quick">[\s\S]*?<span class="bx-name">Quick Match<\/span>/.test(html), 'Continue (Play, a Quick Match, while nothing is under way) is the primary and takes focus; Quick Match is Match\'s first box');
+  ok(/<button class="btn bx" id="b-match" autofocus>[\s\S]*?<span class="bx-name">Game<\/span><span class="bx-sub" id="game-note">Quick Match<\/span>/.test(html) && !html.includes('id="b-continue"') && /<button class="btn bx" id="b-quick">[\s\S]*?<span class="bx-name">Quick Match<\/span>/.test(html), 'Game takes focus, its note Quick Match (1.10: Continue and its Play gone from the home); Quick Match is Game\'s first box');
   ok(!html.includes('data-key="duels"'), 'the Duels switch is gone');
   ok(html.includes("duels:'live'"), 'a match you play passes live duels');
   ok(!/<dt[^>]*>Saving<\/dt>/.test(html) && /<button class="btn warn" id="hub-reset">Start Fresh<\/button>/.test(html), 'Start Fresh is the table\'s own button (re-pinned 2026-11-09: How to Play\'s Saving entry, which explained it, went with the prose)');
@@ -991,7 +991,7 @@ function settle(pick) {
   const D = T.debug, s = D.settings(), $ = id => document.getElementById(id), H = T.home, K = T.cups, P = T.picker;
   const v = n => P.view(n), to = (n, key) => { P.group(n, v(n).ladder.findIndex(g => g.key === key) - v(n).gi); return v(n); };
   const head = n => $('t-side' + n).innerHTML.slice(0, $('t-side' + n).innerHTML.indexOf('<div class="pk-card'));
-  X.setChamp(null); K.set(null); s.cat = 'men'; s.myClub = null; s.myNat = null; s.pick = [null, null]; s.fav = []; s.recent = [[], []];
+  X.setChamp(null); K.set(null); s.cat = 'men'; s.myClub = 'FAR'; s.myClubLegacy = false; s.myNat = null; s.pick = [null, null]; s.fav = []; s.recent = [[], []];   // My Team's club Farnham, a fixture (1.10: none by default; tools/links.mjs)
   D.openTeams('quick');
   // re-pinned for the county clubs (LOCAL): the Opponent opens on Old Alleynians, Farnham's league's first in Surrey's pyramid order (4th of 12;
   // Wimbledon 9th); the head's line drops Local (the group's button names the county, and may take two lines)

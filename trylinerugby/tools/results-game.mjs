@@ -493,7 +493,8 @@ async function browserChecks() {
       await ctx.close();
     }
     // the census (the owner, 15 Nov 2026, "Squeeze the Games Row"): every club in the real results.json whose result shows, on the plain home
-    // and on the home with a Trophy Cabinet, at the five sizes: Your Games and the place line shown, the league whole (two lines at most,
+    // and on the home with Install Game and Updating beside the wordmark (1.10: the Trophy Cabinet left the column for Team and Settings' Team
+    // tab, so the tools are what still takes the box's room), at the five sizes: Your Games and the place line shown, the league whole (two lines at most,
     // never cut, never joined to the place), no page scroll, nothing over the box, everything inside it
     const REAL = fileURLToPath(new URL('../results.json', import.meta.url));
     if (fs.existsSync(REAL)) {
@@ -510,7 +511,7 @@ async function browserChecks() {
           const day = real.generated.slice(0, 10);
           R.set(real, day);
           const ids = Object.keys(real.clubs).filter(id => X.ALL_TEAMS.some(t => t.id === id && !X.isNation(t)));
-          const one = id => {
+          let one = id => {
             st.myClub = id; T.debug.goHome(); T.home.fit();
             const e = R.news(X.ALL_TEAMS.find(t => t.id === id), 'men');
             if (!e || !vis($('my-real'))) return null;
@@ -532,15 +533,17 @@ async function browserChecks() {
           };
           pass('plain');
           X.newChamp(X.NATIONS[0], X.NATIONS.slice(1)); const ch = X.champ(); for (let i = 0; i < 5; i++) { ch.results.push(ch.fixtures[i].map(p => ({ h:p[0], a:p[1], hs:20, as:10, ht:3, at:1 }))); ch.round++; } X.setChamp(ch); X.save(); X.load(); X.setChamp(null);
-          T.debug.goHome(); out.cabinet = !$('b-cabinet').hidden;
-          pass('with a Trophy Cabinet');
+          T.debug.goHome(); out.cabinet = !$('b-cabinet').hidden && !$('home-side').contains($('b-cabinet'));
+          const one0 = one; one = id => { for (const t of ['app-tools', 'b-install', 'offline-update']) $(t).hidden = false; return one0(id); };
+          pass('with Install and Updating');
+          for (const t of ['app-tools', 'b-install', 'offline-update']) $(t).hidden = true;
           out.clubs = ids.length;
           return out;
         }, real);
         ok(!errors.length, `${kind} census: no page error (${errors[0] || ''})`);
-        ok(c.cabinet, `${kind} census: the Trophy Cabinet showing for its pass`);
-        console.log(`${kind} census: ${c.plain.shown} clubs, fit levels plain ${json(c.plain.fits)}, with a Trophy Cabinet ${json(c['with a Trophy Cabinet'].fits)}`);
-        for (const name of ['plain', 'with a Trophy Cabinet']) {
+        ok(c.cabinet, `${kind} census: a Trophy Cabinet won, its row on the Team tab, never in the box's column (1.10)`);
+        console.log(`${kind} census: ${c.plain.shown} clubs, fit levels plain ${json(c.plain.fits)}, with Install and Updating ${json(c['with Install and Updating'].fits)}`);
+        for (const name of ['plain', 'with Install and Updating']) {
           const r = c[name];
           ok(r.shown >= 300 && !r.bad.length, `${kind} census, ${name}: all ${r.shown} clubs whose real result shows (of ${c.clubs}) keep Your Games and the place line, the league whole and never joined, no page scroll, everything inside the box (fit levels ${json(r.fits)}${r.bad.length ? '; ' + r.bad.length + ' not: ' + r.bad.slice(0, 6).join('; ') : ''})`);
         }

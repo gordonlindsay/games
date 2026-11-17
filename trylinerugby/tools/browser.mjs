@@ -36,17 +36,17 @@ async function open(w, h, touch) {
     if (r.error || x) throw Error('in the page: ' + (r.error ? r.error.message : (x.exception && x.exception.description) || x.text) + '\n  evaluating: ' + expr.slice(0, 160)); return r.result.result.value; };
   return { send, ev, close:async () => { ws.close(); await fetch(`http://127.0.0.1:${port}/json/close/${t.id}`).catch(() => {}); } };
 }
-// a season under way, its line in the game's own mid-season format, on the five boxes (Continue's line, the Career box's note, the Trophy
-// Cabinet's strip) and on Competitions (Continue Championship, its note and New Championship), with the whole tools row: Install Game and Updating, Offline
+// a season under way, its line in the game's own mid-season format, on the four tiles (1.10: Game's and Career's notes), on Team and
+// Settings' Team tab (the Trophy Cabinet's row) and on Competitions (Continue Championship, its note and New Championship), with the whole tools row: Install Game and Updating, Offline
 // Ready giving way to Updating (re-pinned 2026-11-11: Updating takes its place, so the wordmark keeps its size). Shown, not saved, so the next page opens on the save as it was. It returns what does not show, so a fixture that stops matching the
 // page fails rather than measures the plain home
 const SEASON = view => `(() => { const T = window.__tryline, $ = i => document.getElementById(i), on = e => !e.hidden && !e.closest('[hidden]') && e.getBoundingClientRect().height > 0;
-  T.debug.goHome(); if ('${view}' === 'champ') T.home.open('champ');
-  const n1 = $('champ-note'), n2 = $('career-note'); n1.textContent = 'Guildfordians · 2nd · Round 3 of 5'; n1.hidden = false; n2.textContent = 'Minis · Guildfordians · Round 3 of 5'; n2.hidden = false;
-  $('hc-go').hidden = false; $('hc-new').hidden = true; $('b-champ').textContent = 'Continue Championship'; $('b-cabinet').hidden = false; $('cont-name').textContent = 'Continue'; $('cont-note').textContent = 'Championship · Round 3 v Guildfordians';
+  T.debug.goHome(); if ('${view}' === 'champ') T.home.open('champ'); if ('${view}' === 'team') T.home.open('settings', null, 'team');
+  const n1 = $('champ-note'); n1.textContent = 'Guildfordians · 2nd · Round 3 of 5'; n1.hidden = false; T.home.noteSet($('game-note'), 'Round 3 v Guildfordians'); T.home.noteSet($('career-note'), 'Round 3 v Guildfordians');
+  $('hc-go').hidden = false; $('hc-new').hidden = true; $('b-champ').textContent = 'Continue Championship'; $('b-cabinet').hidden = false;
   for (const id of ['app-tools', 'offline-update', 'offline-status', 'b-install']) $(id).hidden = false;
   T.home.fit();
-  return ['b-install', 'offline-update', ...('${view}' === 'champ' ? ['b-champ', 'champ-note', 'hc-fresh'] : ['cont-note', 'career-note', 'b-cabinet'])].filter(id => !on($(id))).concat(on($('offline-status')) ? ['Offline Ready beside Updating'] : []).join(); })()`;
+  return ['b-install', 'offline-update', ...('${view}' === 'champ' ? ['b-champ', 'champ-note', 'hc-fresh'] : '${view}' === 'team' ? ['b-cabinet', 'b-locker', 'b-my'] : ['game-note', 'career-note'])].filter(id => !on($(id))).concat(on($('offline-status')) ? ['Offline Ready beside Updating'] : []).join(); })()`;
 const FIT = `(() => { const s = document.getElementById('s-home'); return JSON.stringify([s.scrollHeight, s.clientHeight]); })()`;
 try {
   for (const [w, h, touch] of [[844, 390, false], [844, 390, true], [667, 375, false], [667, 375, true]]) {
@@ -54,11 +54,11 @@ try {
     const [a0, a1] = JSON.parse(await pg.ev(FIT));
     ok(a0 <= a1, `${name}: a fresh home does not scroll (${a0} of ${a1})`);
     const mid = [];
-    for (const view of ['boxes', 'champ']) {
+    for (const view of ['boxes', 'champ', 'team']) {
       const missing = await pg.ev(SEASON(view));
-      ok(missing === '', `${name}: ${view === 'champ' ? 'Competitions' : 'the five boxes'}: the fixture shows ${view === 'champ' ? 'Continue Championship, its note and New Championship' : 'Continue\'s line, the Career box\'s note and the Trophy Cabinet'}, Install Game and Updating in Offline Ready's place (missing: ${missing || 'none'})`);
+      ok(missing === '', `${name}: ${view === 'champ' ? 'Competitions' : view === 'team' ? 'the Team tab' : 'the four tiles'}: the fixture shows ${view === 'champ' ? 'Continue Championship, its note and New Championship' : view === 'team' ? 'My Team, the Locker and the Trophy Cabinet' : 'Game\'s and Career\'s notes'}, Install Game and Updating in Offline Ready's place (missing: ${missing || 'none'})`);
       const [b0, b1] = JSON.parse(await pg.ev(FIT));
-      ok(b0 <= b1, `${name}: a championship and a career under way, ${view === 'champ' ? 'on Competitions' : 'on the five boxes with the Trophy Cabinet'}, Install Game and Updating: the home does not scroll (${b0} of ${b1})`);
+      ok(b0 <= b1, `${name}: a championship and a career under way, ${view === 'champ' ? 'on Competitions' : view === 'team' ? 'on the Team tab with the Trophy Cabinet' : 'on the four tiles'}, Install Game and Updating: the home does not scroll (${b0} of ${b1})`);
       mid.push(`${view} ${b0} of ${b1}`);
     }
     console.log(`${name}: ${a0} of ${a1}, mid-season ${mid.join(', ')}`);
@@ -102,7 +102,7 @@ try {
     const SCREENS = [
       ['the home (My Team\'s box)', `S.myClub = 'NTH'; D.goHome();`, 1],
       // re-pinned for the side-by-side team screen (2026-11-11): one team a side, so a state draws two sets of stars (one in the one-side modes)
-      ['Quick Match, both sides', `S.myClub = null; S.pick = [null, null]; D.openTeams('quick');`, 2],
+      ['Quick Match, both sides', `S.myClub = 'FAR'; S.pick = [null, null]; D.openTeams('quick');`, 2],   // My Team's club Farnham, a fixture (1.10: none by default)
       ['a nation on each side', `const P = T.picker, at = (n, k) => P.group(n, P.view(n).ladder.findIndex(g => g.key === k) - P.view(n).gi); at(0, 'nat.rsa'); at(1, 'nat.nzl');`, 2],
       ['Surrey on both sides', `const P = T.picker, at = (n, k) => P.group(n, P.view(n).ladder.findIndex(g => g.key === k) - P.view(n).gi); at(0, 'sur'); at(1, 'sur'); P.step(1, 3);`, 2],
       // re-pinned for the county clubs (LOCAL, 2026-11-14): Counties' sides are Surrey's, off the ladder; the longest county's name in its place (its group's button on two lines)
@@ -158,7 +158,7 @@ try {
   const order = [await pg.ev(`document.activeElement.id`)];
   for (let i = 0; i < 2; i++) { await pg.send('Input.dispatchKeyEvent', { type:'keyDown', key:'Tab', code:'Tab', windowsVirtualKeyCode:9, modifiers:8 }); await pg.send('Input.dispatchKeyEvent', { type:'keyUp', key:'Tab', code:'Tab', windowsVirtualKeyCode:9, modifiers:8 }); order.push(await pg.ev(`document.activeElement.id`)); }
   console.log('Shift+Tab from the start: ' + order.join(', '));
-  ok(order.join() === 'b-continue,b-locker,b-import', 'Tab order follows the screen: back from Continue goes into My Team\'s box, its row from the end, the Locker then Add Your Team (the home of 2026-11-11; main\'s went along its top row, PR #14 had Camera and Half Length there) (' + order.join(', ') + ')');
+  ok(order.join() === 'b-match,my-box,b-install', 'Tab order follows the screen: back from Game (1.10: the first tile, where Continue was) goes to My Team\'s box, one button since its row left for the Team tab, then Install Game beside the wordmark (the fixture shows it) (' + order.join(', ') + ')');
   await pg.close();
   // the two cues, rendered through the real bus: the loudest 50 ms, whole and above 300 Hz (roughly what a phone speaker plays). The numbers, not the ear
   const snd = await open(844, 390, false); await snd.send('Page.navigate', { url:site + '/sounds.html' }); await wait(1200);

@@ -409,7 +409,8 @@ pending('10. a women\'s championship through the toggle (main\'s category)', asy
   C.set(boy); C.play();
   ok(B.lookOf(T.M.careerP).g === 0 && B.lookOf(T.M.careerP).style === 7 && T.M.players.every(p => B.lookOf(p).g === 0), 'a male player in a men\'s side, with a plait if you like');
   D.exitMatch(); C.set(null);
-  // the New Player screen and Your Look
+  // the New Player screen and Your Look (My Team's club Farnham, a fixture: since 1.10 a new game has none, and Start Career asks for one first)
+  D.settings().myClub = 'FAR';
   S.careerNewOpen();
   const d = S.draft();
   ok(json(d.look) === json(S.CAREER_LOOK), 'the screen opens on the default look');
