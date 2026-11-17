@@ -10,7 +10,8 @@
    one-side mode, pickMode 'setup': the whole ladder, My Clubs and Favourites, clubs only, opened on its Filter at the top with nothing
    chosen, or on a team link's club: 1.10) and Your Look (New Player's builder: src/ui-career.js, lookFor 'setup'). Nothing is set until it
    ends, so a step skipped, or every step, keeps the game's own defaults, and a Club skipped is no club (1.10). Everyone else, and anyone later, reaches the same answers on My
-   Profile, from Change in My Team's box: the age group and gender as rows, Change Look, and My Team's Change, its old job, one press on.
+   Profile, from Change on Team and Settings' Team tab (My Team's row): the age group and gender as rows, Change Look, and My Team's Change,
+   its old job, one press on.
 
    What an answer sets (profileCat, profileLevel), once, when it is given: nothing locks, and the level and My Team stay changeable as
    ever without rewriting the age group or the gender. The two answers are changed in Settings too, under Difficulty (profileSettings,

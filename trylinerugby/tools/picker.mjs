@@ -642,7 +642,7 @@ const BRK = T.local.pickLocalOrder(X.TEAM_LISTS.find(l => l.key === 'brk').teams
   D.openTeams('quick'); P.group(0, view(0).ladder.findIndex(x => x.key === 'nat.arg') - view(0).gi);
   ok(/<span class="pk-chev prev off" data-act="cprev"/.test(P.panel(0)) && /<span class="pk-chev next off" data-act="cnext"/.test(P.panel(0)), 'a group of one (Argentina): the card\'s chevrons off, as Previous and Next are');
   const menus = fs.readFileSync(new URL('../src/ui-menus.js', import.meta.url), 'utf8'), body = readGameSource();
-  ok(/<button class="btn pk-find" id="t-find" aria-label="Filter Teams" aria-haspopup="dialog"><svg [^]*?<\/svg><span>Filter<\/span><\/button>/.test(body) && menus.includes("$('t-find').setAttribute('aria-label', 'Filter ' + pickFindWord());") && menus.includes("const pickFindWord = () => (pickMode === 'career' || pickMode === 'setup' ? 'Clubs' : 'Teams');"), 'the search icon with its word, Filter, named Filter Teams, or Filter Clubs where only clubs are listed (the browser checks the name as drawn)');
+  ok(/<button class="btn pk-find" id="t-find" aria-label="Filter Teams" aria-haspopup="dialog"><svg [^]*?<\/svg><span>Filter<\/span><\/button>/.test(body) && menus.includes("$('t-find').setAttribute('aria-label', 'Filter ' + pickFindWord());") && menus.includes("const pickFindWord = () => (pickMode === 'career' || pickMode === 'setup' || flClubsOnly() ? 'Clubs' : 'Teams');") && menus.includes("const flClubsOnly = () => pickMode === 'my' && FL.top;"), 'the search icon with its word, Filter, named Filter Teams, or Filter Clubs where only clubs are listed (Career\'s, the setup\'s, and My Team\'s Filter at the top with no club: 1.10) (the browser checks the name as drawn)');
   D.goHome(); fresh();
 }
 

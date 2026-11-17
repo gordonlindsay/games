@@ -109,7 +109,7 @@ const fresh = (club = 'FAR') => {
   ok(/<div class="hs-head" id="hs-head">\s*<button class="btn hs-back" id="hs-back" data-back>Back to Menu<\/button>\s*<h2 class="hs-title" id="hs-title">Game<\/h2>\s*<div class="seg ts-tabs" id="ts-tabs" role="tablist" aria-label="Team and Settings" hidden><button role="tab" id="ts-tab-team" data-tab="team" aria-selected="false" aria-controls="ts-team">Team<\/button><button role="tab" id="ts-tab-game" data-tab="game" aria-selected="true" aria-controls="hp-settings">Game<\/button><\/div>\s*<\/div>/.test(home), 'a step: Back (the controller\'s B too) and its title along the top; Team and Settings\' tabs, Team | Game, there in the title\'s place');
   const steps = [...home.matchAll(/<div class="hs-panel hp-([a-z]+)[^"]*" id="hp-\1" data-step="\1"(?: role="tabpanel" aria-labelledby="ts-tab-game")? hidden>/g)].map(m => m[1]);
   ok(json(steps) === json(['match', 'champ', 'drills', 'settings']) && json(steps) === json(Object.keys(H.STEPS)) && /id="hp-settings" data-step="settings" role="tabpanel" aria-labelledby="ts-tab-game" hidden>/.test(home), `four steps, each hidden until opened: ${steps.join(', ')} (Team and Settings' Game tab is the settings step's own panel)`);
-  ok(/<div class="hs-panel hp-match" id="hp-match" data-step="match" hidden>\s*<button class="btn bx" id="b-quick">[\s\S]*?<span class="bx-name">Quick Match<\/span><\/span><\/button>\s*<button class="btn bx" id="b-comps">[\s\S]*?<span class="bx-name">Competitions<\/span><\/span><\/button>\s*<\/div>/.test(home) && /\.hp-match\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/.test(css), 'Game: two big boxes, Quick Match | Competitions, in halves');
+  ok(/<div class="hs-panel hp-match" id="hp-match" data-step="match" hidden>\s*<button class="btn primary hm-go" id="b-gcont" hidden>Continue Championship<\/button>\s*<button class="btn bx" id="b-quick">[\s\S]*?<span class="bx-name">Quick Match<\/span><\/span><\/button>\s*<button class="btn bx" id="b-comps">[\s\S]*?<span class="bx-name">Competitions<\/span><\/span><\/button>\s*<\/div>/.test(home) && /\.hp-match\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/.test(css), 'Game: two big boxes, Quick Match | Competitions, in halves, Continue Championship over them (hidden until one is saved)');
   ok(!/id="b-two"|2 Players|Two Player/.test(home) && !/\$\('b-two'\)/.test(menus) && /^function openJoin\(\) \{/m.test(menus) && typeof D.openJoin === 'function', '2 Players has left the home on every device: no button, no listener; Two Player keeps its way in, openJoin (window.__tryline.debug.openJoin)');
   ok(/<div class="hs-panel hp-champ" id="hp-champ" data-step="champ" hidden>\s*<div class="hl-go" id="hc-go" hidden>\s*<button class="btn primary" id="b-champ">Continue Championship<\/button>\s*<p class="resume-note" id="champ-note" hidden><\/p>\s*<button class="btn" id="hc-fresh">New Championship<\/button>\s*<\/div>\s*<div class="hc-new" id="hc-new">\s*<div class="seg" id="hc-tier"><\/div>\s*<div class="hc-comps" id="hc-comps"><\/div>\s*<\/div>\s*<\/div>/.test(home), 'Competitions: Continue Championship (when one is saved) first, New Championship under it, else the tiers and their competitions');
   const drills = [...home.matchAll(/<button class="btn drill" id="pr-([a-z]+)">/g)].map(m => m[1]);
@@ -229,7 +229,7 @@ const fresh = (club = 'FAR') => {
 // 4. the gates: every paid entry keeps its Full Game gate and lock; Quick Match, Skill Games, Settings, the Locker and My Team stay free
 {
   fresh(); S.setTier('free'); D.goHome();
-  ok(['b-comps', 'b-career'].every(id => $(id).classList.contains('locked')) && ['b-match', 'b-drills', 'b-set', 'b-quick', 'b-my', 'b-locker', 'b-help'].every(id => !$(id).classList.contains('locked')) && !/id="b-two"/.test(html), 'free: Competitions and Career locked; Game, Quick Match, Skill Games, Team and Settings, My Team\'s Change and the Locker not (and no 2 Players to lock)');
+  ok(['b-comps', 'b-career', 'b-gcont'].every(id => $(id).classList.contains('locked')) && ['b-match', 'b-drills', 'b-set', 'b-quick', 'b-my', 'b-locker', 'b-help'].every(id => !$(id).classList.contains('locked')) && !/id="b-two"/.test(html), 'free: Competitions and Career locked; Game, Quick Match, Skill Games, Team and Settings, My Team\'s Change and the Locker not (and no 2 Players to lock)');
   ok($('b-import').classList.contains('locked'), 'Add Your Team locked: it is the Super Fan\'s');
   ok(/if \(seg && seg\.children\[3\]\) storeMark\(seg\.children\[3\], 'hard'\);/.test(fs.readFileSync(new URL('../src/ui-store.js', import.meta.url), 'utf8')) && /if \(key === 'diff' && i === 3 && !storeGate\('hard'/.test(menus), 'Hard keeps its lock and its gate in Settings');
   $('b-match').click(); $('b-comps').click(); ok(H.step() === 'champ' && $('m-store').hidden, 'Competitions opens its step, each competition locked in it');
@@ -243,8 +243,8 @@ const fresh = (club = 'FAR') => {
   $('pr-cones').click(); ok($('m-store').hidden && T.drills.state(), 'a drill is free'); T.practice.choose();
   X.newChamp(X.NATIONS[0], X.NATIONS.slice(1, 6)); D.goHome();
   ok(!$('b-match').classList.contains('locked') && /^Continue · Round 1 v /.test($('game-note').textContent), 'a championship under way on the free tier: Game\'s note keeps its line, Game itself free (Quick Match is)');
-  $('b-match').click(); ok(H.step() === 'champ' && $('b-champ').classList.contains('locked') && $('m-store').hidden, 'Game opens Competitions on Continue Championship, locked');
-  $('b-champ').click(); ok(!$('m-store').hidden && S.ui().feature === 'champ' && X.champ(), 'and it opens the Unlock card, the championship kept'); S.close(); D.goHome();
+  $('b-match').click(); ok(H.step() === 'match' && !$('b-gcont').hidden && $('b-gcont').classList.contains('locked') && $('b-champ').classList.contains('locked') && H.first() === $('b-gcont') && $('m-store').hidden, 'Game opens its step with Continue Championship on top, locked, the focus on it');
+  $('b-gcont').click(); ok(!$('m-store').hidden && S.ui().feature === 'champ' && X.champ(), 'and it opens the Unlock card, the championship kept'); S.close(); D.goHome();
   X.setChamp(null); C.start({ name:'Sam', pos:'B', num:7, club:X.CLUBS[0] }); D.goHome();
   ok($('b-career').classList.contains('locked') && /^Continue · /.test($('career-note').textContent), 'a career likewise: Career locked, its note kept'); $('b-career').click(); ok(!$('m-store').hidden && S.ui().feature === 'career', 'its Unlock card'); S.close();
   C.set(null); S.setTier(null); D.goHome();
@@ -317,7 +317,7 @@ const fresh = (club = 'FAR') => {
   D.goHome(); ok(K.history().length === 1 && !$('b-cabinet').hidden, 'a season won: the Trophy Cabinet\'s row on Team and Settings\' Team tab (1.10)');
   ok(/data-kind="league" data-metal="silver"/.test($('tc-list').innerHTML) && /<\/span>1<span class="tc-w">&nbsp;Title<\/span>/.test($('tc-list').innerHTML) && /data-kind="triple" data-metal="silver"/.test($('tc-list').innerHTML) && $('b-cabinet').getAttribute('aria-label') === 'Trophy Cabinet: 1 Title, 1 Triple Crown', `each trophy in its shape and metal, and its count: England's Six Nations won, 1 Title and 1 Triple Crown (${$('b-cabinet').getAttribute('aria-label')})`);
   $('b-cabinet').click(); ok(shown() === 's-cabinet' && /England/.test($('home-history').innerHTML), 'the row opens the Trophy Cabinet on its own screen');
-  $('cab-back').click(); ok(shown() === 's-home' && H.step() === 'settings' && H.tab() === 'team', 'and Back to Menu comes back to the Team tab, where its row is');
+  $('cab-back').click(); ok(shown() === 's-home' && H.step() === 'settings' && H.tab() === 'team', 'and Back to Team comes back to the Team tab, where its row is');
   K.set(K.cupNew('world', { user:X.natList('men')[4], cat:'men' })); D.goHome(); H.open('champ');
   ok(!$('hc-go').hidden && $('hc-new').hidden && /data-kind="world"[\s\S]*World Cup · <\/span>Pool [ABCD]$/.test($('champ-note').innerHTML) && $('b-champ').textContent === 'Continue Championship', 'a cup under way: Continue Championship, its note the cup');
   $('b-champ').click(); ok(shown() === 's-cup', 'which goes to the cup');
@@ -356,16 +356,18 @@ const fresh = (club = 'FAR') => {
   ok(H.under() === 'champ' && $('game-note').textContent === 'Continue · Round 1 v ' + opp.name && $('game-note').dataset.fix === 'Round 1 v ' + opp.name && $('b-match').getAttribute('aria-label') === 'Game, Continue · Round 1 v ' + opp.name, `a championship: Game's note Continue · Round 1 v ${opp.name}, read with its name (${$('game-note').textContent})`);
   ok(H.contLine('champ') === 'Championship · Round 1 v ' + opp.name, 'what is under way, in full (the tools\' line): Championship · Round 1 v ' + opp.name);
   ok(H.chunks('Quick Match') === '<span class="nw">Quick Match</span>' && H.chunks('Career · Transfer Window') === '<span class="nw">Career ·</span> <span class="nw">Transfer Window</span>' && H.chunks('World Cup · Pool A v <b>') === '<span class="nw">World Cup ·</span> <span class="nw">Pool A</span> <span class="nw">v &lt;b&gt;</span>' && H.chunks('v France') === '<span class="nw">v France</span>', 'the parts: a line without a fixture is one or two, a name escaped');
-  $('b-match').click(); ok(shown() === 's-home' && H.step() === 'champ' && !$('hc-go').hidden && $('hs-back').textContent === 'Back to Game', 'Game opens Competitions, Continue Championship first (one press from the step it opens), its Back to Game');
-  $('b-champ').click(); ok(shown() === 's-hub', 'Continue Championship opens its hub');
-  D.goHome(); $('b-match').click(); $('hs-back').click(); ok(H.step() === 'match', 'and Back to Game is Quick Match | Competitions, Quick Match a press away');
+  $('b-match').click(); ok(shown() === 's-home' && H.step() === 'match' && !$('b-gcont').hidden && $('b-gcont').textContent === 'Continue Championship' && H.first() === $('b-gcont') && !$('b-quick').hidden && !$('b-comps').hidden && $('hp-match').classList.contains('go') && $('hs-back').textContent === 'Back to Menu', 'Game opens its step with Continue Championship on top, as Competitions has it (one press from the step), the focus on it, Quick Match | Competitions under it');
+  $('b-gcont').click(); ok(shown() === 's-hub', 'Continue Championship opens its hub');
+  D.goHome(); $('b-match').click(); $('b-comps').click(); ok(H.step() === 'champ' && !$('hc-go').hidden && $('b-champ').textContent === 'Continue Championship' && $('hs-back').textContent === 'Back to Game', 'Competitions still has its own Continue Championship first, its Back to Game');
+  $('hs-back').click(); ok(H.step() === 'match' && !$('b-gcont').hidden, 'and Back to Game is Game\'s step again, Continue on top');
   { const c = X.champ(); for (let i = 0; i < 5; i++) { c.results.push(c.fixtures[i].map(p => ({ h:p[0], a:p[1], hs:20, as:10, ht:3, at:1 }))); c.round++; } }
   D.goHome(); ok($('game-note').textContent === 'Continue · Final Table', 'finished and not put away: Continue · Final Table');
+  $('b-match').click(); ok(!$('b-gcont').hidden && $('b-gcont').textContent === 'Final Table', 'and Game\'s step: Final Table on top, as Competitions words it'); D.goHome();
   X.setChamp(null);
   K.set(K.cupNew('euro', { user:X.ENGLAND[0], cat:'men' })); D.goHome();
   const fx = K.cupFixture(K.get());
   ok(H.under() === 'champ' && $('game-note').textContent === 'Continue · Semi-Final v ' + K.get().teams[fx.opp].name, `a cup: Continue · Semi-Final v ${K.get().teams[fx.opp].name} (${$('game-note').textContent})`);
-  $('b-match').click(); $('b-champ').click(); ok(shown() === 's-cup', 'Game, then Continue Championship, opens the cup');
+  $('b-match').click(); $('b-gcont').click(); ok(shown() === 's-cup', 'Game, then Continue Championship on its step, opens the cup');
   K.set(K.cupNew('tour', { user:K.cupTourSide('men'), n:0, host:'NZL' })); D.goHome();
   ok(/^Continue · Test 1 v /.test($('game-note').textContent) && !/ of \d/.test($('game-note').textContent), `a tour: Continue · Test 1 v its host, no "of 3" (${$('game-note').textContent})`);
   K.set(null);
@@ -406,7 +408,7 @@ const fresh = (club = 'FAR') => {
   ok(v6().ladder.filter(g => g.key.startsWith('nat.')).length === 12 && !v6().ladder.some(g => g.teams.some(t => t.legend)), 'the countries: the category\'s twelve, no Legend');
   to6(0, 'nat.wal'); P6.go();
   ok(D.settings().myNat === 'WAL' && D.settings().myClub === 'BTH' && mineTag(0) && $('t-go').textContent === 'Done', 'a nation picked: the country, marked, the club kept');
-  P6.go(); ok(shown() === 's-profile', 'Done: back to My Profile, where it was opened'); $('pf-back').click(); ok(shown() === 's-home' && H.step() === 'settings' && H.tab() === 'team', 'and Back to Menu: Team and Settings\' Team tab');
+  P6.go(); ok(shown() === 's-profile', 'Done: back to My Profile, where it was opened'); $('pf-back').click(); ok(shown() === 's-home' && H.step() === 'settings' && H.tab() === 'team', 'and Back to Team: Team and Settings\' Team tab');
   X.catPick('women'); H.myPick(X.natList('women').find(t => t.id === 'CDN')); X.catPick('men');
   ok(D.settings().myNat === 'CDN' && H.myNat('men') === null && H.myNat('women').id === 'CDN' && H.myNat(null).id === 'CDN', 'Canada, from the women\'s twelve: no side on the men\'s list, Canada still on the home');
   H.myPick(X.natList('men').find(t => t.id === 'WAL'));

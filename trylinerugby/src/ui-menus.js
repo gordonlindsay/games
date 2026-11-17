@@ -162,7 +162,7 @@ const HOME_STEPS = {                                         // each step: its t
   drills:{ title:'Skill Games', back:'Back to Menu', from:'b-drills' },
   settings:{ title:'Team and Settings', back:'Back to Menu', from:'b-set' },
 };
-const HOME_STEP_IDS = { match:/^b-(quick|comps)$/, champ:/^(b-champ|hc-)/, drills:/^(pr-|b-help$)/, settings:/^(b-grown|b-my|b-import|b-locker|b-cabinet)$/ };   // a step's buttons by id, where an element cannot say (the tools' stand-in DOM)
+const HOME_STEP_IDS = { match:/^b-(gcont|quick|comps)$/, champ:/^(b-champ|hc-)/, drills:/^(pr-|b-help$)/, settings:/^(b-grown|b-my|b-import|b-locker|b-cabinet)$/ };   // a step's buttons by id, where an element cannot say (the tools' stand-in DOM)
 const HOME_TAB_IDS = /^(b-my|b-import|b-locker|b-cabinet)$/;   // Team and Settings' Team tab's buttons by id (the rest of the step is its Game tab)
 let homeStep = null;                                         // the step on show (a HOME_STEPS key), or null for the four tiles
 let homeTab = 'game';                                        // Team and Settings' tab on show: 'team' (My Team's box opens it) or 'game' (the tile opens it)
@@ -185,6 +185,7 @@ function renderHome() {
   if (typeof importHome === 'function') importHome();      // Add Your Team on the Team tab, where the team screen's Add Your Team card would show (src/import.js)
   homeSetNote();
   homeStepDraw();
+  homeNotesFit();                                           // Game's and Career's notes, written in full just above, fitted again to their line (a redraw with no homeFit after it: the store's prices, Add Your Team shut, My Profile)
 }
 /* The Team and Settings tile's dot: Move Up to Easy waiting in Grown-Ups (the Game tab), or a new medal in the Locker (the Team tab), said
    in its name. Touched only when it changes. */
@@ -223,6 +224,7 @@ const homeLive = b => !!b && !b.hidden && !b.disabled && !(b.closest && b.closes
 function homeFirst() {
   if (!homeStep) return $('b-match');
   const p = homePanel(homeStep), all = sel => (p && p.querySelectorAll ? [...p.querySelectorAll(sel)] : []);
+  if (homeStep === 'match' && homeLive($('b-gcont'))) return $('b-gcont');   // Game: Continue Championship on top while one is saved
   return (homeStep === 'champ' ? all('.btn').find(homeLive) : null)   // Competitions: Continue Championship, or the tier's first competition, before the tiers
     || all('.btn, .seg button').find(homeLive) || $('hs-back');
 }
@@ -248,6 +250,7 @@ function goHome(focus) {
   homeFit();
   const b = homeLive(focus) ? focus : homeFirst();
   if (b && typeof b.focus === 'function') b.focus();
+  if (linkWait) linkLater();                                 // a team link that came while the home was not showing (linkBoot)
 }
 function homeFocus(b, ring) {                                // the focus on b, and a controller's ring with it where the ring was showing
   if (!b) return;
@@ -279,14 +282,11 @@ function homeBack() {
 }
 /* The home on a step (Competitions, after New Championship or a cup put away), or on the four tiles. */
 function homeShow(k, focus) { goHome(focus); if (HOME_STEPS[k] && homeStep !== k) homeOpen(k, focus); }
-/* Game: its step, Quick Match | Competitions. While a championship or a cup is saved (Game's note says Continue), Competitions' step, with
-   Continue Championship first, so picking it up is one press from the step Game opens; its Back is Game's own step. */
-function homeGameOpen() {
-  const saved = !!cup || !!(champ && champ.teams && champ.teams[champ.user]);
-  if (saved) { homeStep = 'match'; homeOpen('champ'); return; }
-  homeOpen('match');
-}
-$('b-match').addEventListener('click', () => { ac(); homeGameOpen(); });
+/* Game: its step, Quick Match | Competitions. While a championship or a cup is saved (Game's note says Continue), Continue Championship
+   on top of it, across the row, as Competitions has it (champHome), and the focus on it: picking it up is one press from the step Game
+   opens, and Quick Match is still there. */
+$('b-match').addEventListener('click', () => { ac(); homeOpen('match'); });
+$('b-gcont').addEventListener('click', () => $('b-champ').click());   // Competitions' own Continue: its lock, the cup's or the championship's hub
 $('b-comps').addEventListener('click', () => { ac(); homeOpen('champ'); });   // locked on the free tier, as Championship's headline was: each competition opens the Unlock card
 $('b-drills').addEventListener('click', () => { ac(); homeOpen('drills'); });
 $('b-set').addEventListener('click', () => { ac(); homeOpen('settings', null, 'game'); });   // the tile: the Game tab, the settings one press away as before
@@ -305,7 +305,7 @@ $('b-mypick').addEventListener('click', () => { ac(); myClubOpen($('b-mypick'));
    button that way (navNearest). On the four tiles: Left from the tiles' first column goes to My Team's box (or its Pick Your Club), and
    Right from it goes back to the tile Left came from (homeNavLeft), else the tile level with it, so Left then Right is where it started;
    Up and Down from the box go nowhere. On a step, Down from Back (or from Team and Settings' tabs) lands on the step's first row
-   (Competitions' tiers, which sit to its right), and Up from that row goes back up (Team and Settings: to the tab on show); in Team and
+   (Competitions' tiers, which sit to its right), and Up from that row goes back up (Team and Settings: to the tab on show); Down from Game's Continue Championship, across its top, is Quick Match, and Up from either half is it; in Team and
    Settings' Game tab Up and Down go a row at a time, to the button nearest across (Difficulty, Age Group | Gender, Sound | Match Help, Half
    Length | Camera), the last row's Down to nothing, and Left and Right stay in their row, nothing past either end; along the top bar, Left
    and Right go Back, Team, Game. */
@@ -342,6 +342,8 @@ function homeNavPick(from, dx, dy, cands) {
       return way.filter(el => Math.abs(foot(el) - foot(near)) <= 8).sort((a, b) => Math.abs(mid(a, 'x') - mid(from, 'x')) - Math.abs(mid(b, 'x') - mid(from, 'x')))[0];
     }
     if (homeStep === 'settings' && homeTab === 'team' && dx && !dy && inside.includes(from)) return null;   // the Team tab's rows: one control a row
+    if (homeStep === 'match' && from === $('b-gcont') && !dx && dy > 0 && cands.includes($('b-quick'))) return $('b-quick');   // Game's Continue across the top: Down on Quick Match, the first half, at any width
+    if (homeStep === 'match' && (from === $('b-quick') || from === $('b-comps')) && !dx && dy < 0 && cands.includes($('b-gcont'))) return $('b-gcont');   // and Up from either half on it, never past it to Back
     return undefined;
   }
   if (side.contains(from) && dy && !dx) return null;               // My Team's column holds one button: Up and Down go nowhere
@@ -428,8 +430,8 @@ function homeNoteSet(el, fix, plain) {
   if (el.style) el.style.fontSize = '';
   el.hidden = !fix && !plain;
 }
-/* Game's tile: Quick Match, or Continue · Round 3 v Wimbledon while a championship or a cup is saved (a press then opens Competitions on its
-   Continue Championship: homeGameOpen), read out with the tile's name. */
+/* Game's tile: Quick Match, or Continue · Round 3 v Wimbledon while a championship or a cup is saved (a press then opens Game's step with
+   Continue Championship on top: champHome), read out with the tile's name. */
 function homeGame() {
   const ch = !!cup || !!(champ && champ.teams && champ.teams[champ.user]), n = $('game-note');
   homeNoteSet(n, ch ? homeContinueLine('champ').split(' · ').slice(1).join(' · ') : null, 'Quick Match');
@@ -478,10 +480,12 @@ function myClubOpen(from) {
    cannot take a link until it has one of its own. */
 function linkFind(v) {
   const k = String(v == null ? '' : v).trim().toLowerCase(); if (!k || k.length > 64) return null;
-  const fan = typeof FAN_CLUBS !== 'undefined' ? FAN_CLUBS.find(c => c.key === k) : null, ft = fan && typeof storeTeamOf === 'function' ? storeTeamOf(fan) : null;
+  const slug = pickSlug(k);                                  // a name typed or encoded (Old%20Alleynians) as its slug
+  const fan = typeof FAN_CLUBS !== 'undefined' ? FAN_CLUBS.find(c => c.key === k || c.key === slug) : null, ft = fan && typeof storeTeamOf === 'function' ? storeTeamOf(fan) : null;
   if (ft) return ft;
   const clubs = TEAM_LISTS.filter(l => l.tier > 0).flatMap(l => l.teams);
-  return clubs.find(t => String(t.id).toLowerCase() === k) || clubs.find(t => pickSlug(t.name) === k || (t.full && pickSlug(t.full) === k)) || null;
+  return clubs.find(t => String(t.id).toLowerCase() === k) || clubs.find(t => pickSlug(t.name) === slug)
+    || clubs.find(t => t.full && pickSlug(t.full) === slug) || null;   // a club's own name before another's full name (#club=melbourne: Melbourne, not Melbourne Derbys, whose full name it is)
 }
 function linkRead() {                                        // #club=<v> on the address: its club (or null), the hash taken off
   let h = '';
@@ -493,13 +497,20 @@ function linkRead() {                                        // #club=<v> on the
   return linkFind(v);
 }
 let linkPending = null;                                      // a first launch's link, where the setup opens later (the tools': profileSetupOpen takes it)
+let linkWait = null;                                         // a link that came while the home was under something else: asked as it comes back (linkLater)
 function linkBoot() {
   const t = linkRead(); if (!t) return null;
   if (typeof profileRun !== 'undefined' && profileRun) { profileRun.link = t; return t; }   // the setup under way: its Club opens on this club's card
   if (typeof profileFirst !== 'undefined' && profileFirst) { linkPending = t; return t; }
-  if (!myIs(t)) linkAsk(t);                                  // already My Team's: nothing to ask
+  if (myIs(t)) return t;                                     // already My Team's: nothing to ask
+  const busy = $('s-home').hidden || linkCard || (typeof document !== 'undefined' && document.querySelector && document.querySelector('.modal:not([hidden]):not(#m-link)'));
+  if (busy) linkWait = t; else linkAsk(t);                   // the home under something else (a match, the team screen, a card): asked as the home comes back (goHome)
   return t;
 }
+/* A link opened while the game is already open in the tab (the address's hash changed, the page kept): read as at the start, the hash
+   taken off, the question asked on the home. */
+function linkLater() { const t = linkWait; linkWait = null; if (t && !myIs(t) && !linkCard) linkAsk(t); }
+try { if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('hashchange', () => linkBoot()); } catch (e) { /* no window: the tools */ }
 /* Make Farnham My Team?, Change | Keep, as Leave Minis? is asked (minisAsk, kids.js): over the home, the rest inert, the focus on Keep, a
    double tap that opened it never going on to Change, Escape and a controller's B as Keep. Change makes the club My Team's (the country as it
    was), and the home shows it. */
@@ -583,7 +594,7 @@ function myNatReal(n) {
 function myHome() {
   const c = myClubTeam(), n = myNatTeam(null), box = $('my-box'), none = !c;
   /* No club (1.10): the box is My Team and Pick Your Club, nothing else, and not a button itself; Team and Settings' My Team row is My Team
-     with Change (My Profile, whose My Team row reads Pick Your Club). */
+     with Change (My Profile, whose My Team row reads Pick Your Club, and the only way to the look). */
   box.classList.toggle('none', none); $('my-none').hidden = !none;
   if (none) {
     if (typeof box.removeAttribute === 'function' && typeof box.getAttribute === 'function' && box.getAttribute('role')) { box.removeAttribute('role'); box.removeAttribute('tabindex'); }   // not a button itself: Pick Your Club inside it is
@@ -720,6 +731,7 @@ function champHome() {
     homeNote(note, champNote(champ), champ.teams[champ.user].name);
   } else { $('b-champ').textContent = 'Continue Championship'; note.hidden = true; }
   storeMark($('b-champ'), 'champ');
+  $('b-gcont').hidden = !saved; $('b-gcont').textContent = $('b-champ').textContent; storeMark($('b-gcont'), 'champ'); $('hp-match').classList.toggle('go', saved);   // Game's step: the same Continue on top
   $('hc-fresh').textContent = 'New Championship'; freshArmed = false;
   if (homeTier == null) homeTier = poolTier(myPool() || 'sur');
   for (const b of $('hc-tier').querySelectorAll('[data-tier]')) b.setAttribute('aria-pressed', String(+b.dataset.tier === homeTier));
@@ -1020,7 +1032,7 @@ function pickOpen(s) {
     return;
   }
   if (pickMode === 'champ') { const view = teamsView(), d = view ? view.pick : teamDefault(); if (d) at(d, d.custom ? 'mine.made' : null); return; }   // no side to play as: on the competition's first, nothing set
-  if (pickMode === 'my') { const c = myClubTeam(); at(c, c && c.custom ? 'mine.made' : null); if (c) st.list = myPool(); return; }
+  if (pickMode === 'my') { const c = myClubTeam(); at(c, c && c.custom ? 'mine.made' : null); if (c) st.list = myPool(); else st.club = true; return; }   // no club (Pick Your Club): its Filter's Close leaves the card on the ladder's first club, never a nation (pickResolve)
   if (pickMode === 'setup') { const c = profileSetupClub(); at(c, c && c.custom ? 'mine.made' : null); return; }
   if (pickMode === 'career' && careerDraft) { const c = careerDraft.club; at(c, c && c.custom ? 'mine.made' : null); if (c) st.list = careerDraft.league; }
 }
@@ -1032,6 +1044,7 @@ function pickResolve(st, ladder) {
   if (gi < 0 && st.k) gi = ladder.findIndex(g => g.hemi !== 'fav' && g.hemi !== 'recent' && (!st.list || g.list === st.list) && g.teams.some(t => pickKey(t) === st.k));
   if (gi < 0 && st.k) gi = ladder.findIndex(g => g.hemi !== 'fav' && g.hemi !== 'recent' && g.teams.some(t => pickKey(t) === st.k));
   if (gi < 0 && st.g) gi = ladder.findIndex(g => g.key === st.g);
+  if (gi < 0 && st.club && !st.k) gi = ladder.findIndex(g => g.hemi !== 'fav' && g.hemi !== 'recent' && g.teams.some(t => !t.act && !isNation(t)));   // Pick Your Club: a club's group first
   if (gi < 0) gi = clamp(st.gi, 0, ladder.length - 1);
   const g = ladder[gi];
   let i = g.teams.findIndex(t => pickKey(t) === st.k);
@@ -1278,6 +1291,7 @@ function pickEl(s, act) { const p = $('t-side' + s); return (p && p.querySelecto
    on show, to play as or change), 'my' (My Team: the club, then the country) or 'career' (Career's club: New Player's Change Club). */
 let pickFrom = null;                                       // the home's button that opened the team screen, where Back goes (Quick Match, Play, a competition)
 function openTeams(m, comp, o) {
+  const how = (o && o.dev) || (focusEl ? 'pad' : lastPress === 'key' ? 'kb' : pickFilterHow(null, null));   // how it was asked for, for a Filter opened at the top: a controller's ring, a key, a computer's mouse or a finger (pickFilter)
   resultsSync();                                             // a results file that came while the home was not showing (src/results.js)
   pickMode = m; quickPick = null; pick = { sides:[pickSide(), pickSide()], on:0, opener:0, made:null, lifter:null }; pickView = [null, null];
   pickFrom = (o && o.from) || null;
@@ -1294,7 +1308,7 @@ function openTeams(m, comp, o) {
   renderTeams();
   showScreen('s-teams'); $('s-teams').scrollTop = 0;
   if (typeof pickFit === 'function') pickFit();
-  if (pick.sides[0].top && m !== 'setup') pickFilter(0, '', { dev:(o && o.dev) || 'touch', from:'sheet', top:true });   // nothing to open on (no club): the Filter at its top; the setup's Club opens its own (profileStep)
+  if (pick.sides[0].top && m !== 'setup') pickFilter(0, '', { dev:how, from:'sheet', top:true });   // nothing to open on (no club): the Filter at its top; the setup's Club opens its own (profileStep)
 }
 function renderTeams() {
   const ring = focusEl && pickAt(focusEl), typed = pickAt(document.activeElement);
@@ -1423,7 +1437,8 @@ let pickInert = [];                                          // what the open Fi
 const FL_HEAD = { area:'Area', country:'Country', league:'League' };
 const FL_NOUN = { country:['Country', 'Countries'], league:['League', 'Leagues'], team:['Team', 'Teams'] };
 const pickFilterable = v => !!v && v.ladder.length > 1 && !v.group.fixed;
-const pickFindWord = () => (pickMode === 'career' || pickMode === 'setup' ? 'Clubs' : 'Teams');   // the clubs only (Career's Change Club, the setup's Club): Search Clubs
+const flClubsOnly = () => pickMode === 'my' && FL.top;    // My Team's picker with no club yet (Pick Your Club): its Filter at the top lists and counts the clubs, no nation (a country is under Area, Country, National)
+const pickFindWord = () => (pickMode === 'career' || pickMode === 'setup' || flClubsOnly() ? 'Clubs' : 'Teams');   // the clubs only (Career's Change Club, the setup's Club, Pick Your Club): Search Clubs
 const flSaved = g => g.hemi === 'fav' || g.hemi === 'recent';
 /* The tree: Area, then Country, then League, each league one group of the ladder (gi). Favourites and Recent are one group each, straight
    to their teams; Championship's groups (no area) are the League column itself. */
@@ -1485,7 +1500,8 @@ function flAz(L, n, sorted = true) {
   const gis = [], walk = (x, top) => { if (x.kids) for (const k of x.kids) walk(k, false); else if (x.gi != null && (top || !flSaved(L[x.gi]))) gis.push(x.gi); };
   walk(n, true);
   const seen = new Set(), out = [];
-  for (const gi of gis) L[gi].teams.forEach((t, i) => { const k = pickKey(t); if (t.act || seen.has(k)) return; seen.add(k); out.push({ t, gi, i }); });
+  const clubs = flClubsOnly();
+  for (const gi of gis) L[gi].teams.forEach((t, i) => { const k = pickKey(t); if (t.act || (clubs && isNation(t)) || seen.has(k)) return; seen.add(k); out.push({ t, gi, i }); });
   return sorted ? out.sort((a, b) => listName(a.t).localeCompare(listName(b.t), 'en-GB')) : out;
 }
 const flCount = (L, n) => (FL.top ? flAz(L, n, false).length : n.kids ? n.kids.length : L[n.gi].teams.length);   // at the top, a count of clubs
@@ -1563,11 +1579,11 @@ const FL_CAP = LOCAL.on ? 200 : Infinity;                    // the matches draw
 function filterSearch(L, q) {
   const f = flFold(q); if (!f) return [];
   const rank = text => { const n = flFold(text); return n.startsWith(f) ? 0 : n.split(/[\s'-]+/).some(w => w.startsWith(f)) ? 1 : n.includes(f) ? 2 : -1; };
-  const seen = new Set(), hits = [], order = L.map((g, gi) => gi).sort((a, b) => flSaved(L[a]) - flSaved(L[b]));   // a team's own group first
+  const seen = new Set(), hits = [], order = L.map((g, gi) => gi).sort((a, b) => flSaved(L[a]) - flSaved(L[b])), clubs = flClubsOnly();   // a team's own group first; Pick Your Club: the clubs only
   for (const gi of order) {
     const g = L[gi], by = flSaved(g) ? [] : [g.name, g.county || '', g.home ? natName(g.home) : '', flLeague(g)].filter(Boolean).map(rank).filter(r => r >= 0), there = by.length ? 3 + Math.min(...by) : -1;
     g.teams.forEach((t, i) => {
-      const k = pickKey(t); if (t.act || seen.has(k)) return;
+      const k = pickKey(t); if (t.act || (clubs && isNation(t)) || seen.has(k)) return;
       const line = LOCAL.on && !flSaved(g) && t.league ? rank(t.league) : -1;   // LOCAL: a club's own league too (Regional 2 Thames), at its group's step
       const nm = rank(listName(t)), fu = t.full ? rank(t.full) : -1, own = nm >= 0 && fu >= 0 ? Math.min(nm, fu) : Math.max(nm, fu);   // LOCAL: a club's full name too, where its card's is cut (Weston-super-Mare)
       const r = own >= 0 ? own : there >= 0 && line >= 0 ? Math.min(there, 3 + line) : there >= 0 ? there : line >= 0 ? 3 + line : -1;

@@ -310,7 +310,7 @@ const club = id => X.ALL_TEAMS.find(t => t.id === id);
   F.gender('male'); ok(F.get().look.g === 0 && st.cat === 'men', 'Male: the look\'s body follows, and Men');
   F.gender('na'); $('pf-look').click(); ok(!$('ck-body-f').hidden && F.lookDraft().g === 0, 'Not Say: the Body row, the body as it was');
   T.sidesOf.careerLookSet('g', 1); ok(F.get().look.g === 1, 'and its own body picked there');
-  $('ck-back').click(); $('pf-back').click(); ok(shown() === 's-home', 'Back to Menu');
+  $('ck-back').click(); $('pf-back').click(); ok(shown() === 's-home', 'Back to Team');
   // a player who has picked a side, filling in one question with the other blank: the side is kept (the review's cases, 2026-11-11)
   const once = (set, tap) => { fresh(); Object.assign(st, set); X.save(); $('b-my').click(); tap(); return { cat:st.cat, diff:st.diff, kids:st.kids, gate:!$('m-gate').hidden, barred:T.drills.barred('tackle') }; };
   const w = once({ cat:'women', diff:1 }, () => F.age('adult'));

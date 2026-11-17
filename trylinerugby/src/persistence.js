@@ -274,7 +274,7 @@ function restore(s) {
   if ('profile' in s) profile = typeof cleanProfile === 'function' ? cleanProfile(s.profile) : profile;   // the age group, gender and look (src/profile.js); a save from before it has none
   if ('cupTurn' in s) cupTurn = Number.isInteger(s.cupTurn) && s.cupTurn >= 0 && s.cupTurn <= 9999 ? s.cupTurn : 0;
   if (typeof importRecode === 'function') importRecode(moved);   // after everything that holds a side: a recoded league side is followed into the career, the championship, a cup, My Team, the picks and its record
-  if (settings.myClub && typeof myClubFind === 'function' && !myClubFind(settings.myClub)) settings.myClub = null;   // a My Team since deleted, or its league removed: the default again
+  if (settings.myClub && typeof myClubFind === 'function' && !myClubFind(settings.myClub)) settings.myClub = null;   // a My Team since deleted, or its league removed: no club again (Farnham for a save from before 1.10: myClubLegacy)
   retainCompletedSeason(champ);
   if (typeof cupRetain === 'function') cupRetain(cup);
   if (!hadPlayed && (settings.tut.length > 0 || champ)) settings.played = EARLY.games;   // a save from before the gentler start has already been played

@@ -1374,6 +1374,10 @@ body.desk .desk-only{display:block}
 .hp-match{grid-template-rows:minmax(0,260px);align-content:center}   /* big, centred, but not a wall of empty box on a tall screen */
 .hp-match .btn.bx > svg{width:64px;height:64px;stroke-width:1.6}
 .hp-match .bx-name{font-size:46px}
+/* while a championship or a cup is saved (1.10): Continue Championship on top across the row, as Competitions has it, Quick Match |
+   Competitions under it in halves */
+.hp-match.go{grid-template-rows:auto minmax(0,212px)}
+.hp-match .hm-go{grid-column:1/-1;min-height:48px}
 .hs-panel .btn.primary{min-height:72px;font-size:30px}
 .hl-go{display:flex;flex-direction:column;gap:10px}
 .hl-go .resume-note{margin-top:-4px}
@@ -1872,6 +1876,11 @@ body:has(#m-filter.fl-embed:not([hidden])) #s-teams .btn.pk-find{visibility:hidd
 /* at the top the counts are clubs (536 where it was 7): the Area column takes a little of the empty Country column's width, so Northern and
    its count share the row's line at 667 wide */
 #m-filter.fl-top .fl-cols[data-n="4"]{grid-template-columns:minmax(0,.9fr) minmax(0,.9fr) minmax(0,1.1fr) minmax(0,1.5fr)}
+/* and there a hemisphere is Northern Hemi up to 140px wide: a club count of three figures beside it (536) leaves the full name too little room
+   at 667 wide (a 125px column), where a country's count of one figure left it enough */
+@container (max-width:140px){
+  #m-filter.fl-top .fl-r .hx{display:none}
+}
 /* My Team's box is one button (to Team and Settings' Team tab): the tiles' ground and their hover edge, the game's focus ring */
 .my-box[role="button"]{background:rgba(23,39,29,.94);cursor:pointer}
 .my-box[role="button"]:hover{border-color:var(--chalk-dim)}

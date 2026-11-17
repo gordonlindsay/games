@@ -526,7 +526,7 @@ function champAt4(userWins) {
       && [...mr, ...wr].filter(t => t.off).every(t => t.label === 'Locked, ' + t.need + ' Gold ' + (t.need === 1 ? 'Medal' : 'Medals')) && !/undefined|NaN/.test(body),
       `${g} Golds: Men ${won(mr).length} won, padlocks at ${needs(mr).join(' ') || 'none'}; Women ${won(wr).length} won, padlocks at ${needs(wr).join(' ') || 'none'}`);
   }
-  $('lk-back').click(); ok(!$('s-home').hidden && $('s-locker').hidden, 'Back to Menu goes home');
+  $('lk-back').click(); ok(!$('s-home').hidden && $('s-locker').hidden, 'Back to Team goes home (Team and Settings\' Team tab, where its row is)');
   // full time across Gold 5 and Gold 6: the New Legends line names each new Gold's sides, a women's one only while there is one
   for (const [before, names] of [[4, ['England 2003', 'England 2025 Women']], [5, ['South Africa 2007']]]) {
     golds(before); const feats = L.FEATS.filter(f => f.id !== 'star');            // the fifth and sixth non-star feats: Golden Try, Comeback
@@ -543,7 +543,7 @@ function champAt4(userWins) {
   }
   fresh();
   ok(/<div class="ts-row ts-my">[\s\S]*?<button class="btn" id="b-my">Change<\/button><\/div>\s*<button class="btn ts-row im-home" id="b-import" hidden>Add Your Team<\/button>\s*<button class="btn ts-row lk-home" id="b-locker">Locker<\/button>/.test(html) && !/my-acts/.test(html), 'the home button reads Locker, a row on Team and Settings\' Team tab under My Team\'s Change and Add Your Team (1.10: off the home\'s box, ui-menus.js)');
-  ok(/id="lk-back" data-back>Back to Menu</.test(html) && /<div class="seg lk-tabs" id="lk-tabs"><button>Medals<\/button><button>Ball<\/button><button>Boots<\/button><button>Legends<\/button><\/div>/.test(html), 'Back to Menu is the Back button (a pad\'s B, Android\'s Back); the tabs are Title Case');
+  ok(/id="lk-back" data-back>Back to Team</.test(html) && /<div class="seg lk-tabs" id="lk-tabs"><button>Medals<\/button><button>Ball<\/button><button>Boots<\/button><button>Legends<\/button><\/div>/.test(html), 'Back to Team is the Back button (a pad\'s B, Android\'s Back); the tabs are Title Case');
   ok(![src, css].some(s => /[\u2014\u2190-\u21ff]/.test(s)), 'no em dash and no arrow in the Locker\'s code or styles');
 }
 

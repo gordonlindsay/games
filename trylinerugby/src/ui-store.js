@@ -51,7 +51,7 @@ function storeRender() {
   g.hidden = !live; set.classList.toggle('grown', live);    // Settings: Sound | Match Help | Grown-Ups in thirds
   const ready = live && kidsReady();                        // a dot on Grown-Ups when Move Up to Easy is waiting there (and on the Team and Settings tile: homeSetNote, src/ui-menus.js); touched only when it changes
   if (g.classList.contains('note') !== ready) { g.classList.toggle('note', ready); g.setAttribute('aria-label', ready ? 'Grown-Ups, a suggestion waiting' : 'Grown-Ups'); }
-  storeMark($('b-champ'), 'champ'); storeMark($('b-career'), 'career'); storeMark($('b-comps'), 'champ');
+  storeMark($('b-champ'), 'champ'); storeMark($('b-career'), 'career'); storeMark($('b-comps'), 'champ'); storeMark($('b-gcont'), 'champ');
   const seg = [...document.querySelectorAll('.seg[data-key]')].find(g => g.dataset.key === 'diff');
   if (seg && seg.children[3]) storeMark(seg.children[3], 'hard');
   if (!storeHas('hard')) {
@@ -210,7 +210,8 @@ function storeCardRender() {
   $('st-easy').hidden = !kidsEasy; $('st-links').classList.toggle('four', kidsReset && kidsEasy);   // the two Kids buttons share their row in halves   // Privacy | Support, then Reset Kids Level across the row
   $('st-restore').hidden = !app; $('st-restore').disabled = u.busy;
   $('st-row').classList.toggle('one', !app);
-  $('st-back').textContent = !$('s-teams').hidden ? 'Back to Teams' : !$('s-join').hidden ? 'Back to Players' : 'Back to Menu';   // the card closes onto the screen it opened from
+  $('st-back').textContent = !$('s-teams').hidden ? 'Back to Teams' : !$('s-join').hidden ? 'Back to Players' : typeof profileRun !== 'undefined' && profileRun && !$('s-setup').hidden ? 'Back to ' + ($('su-title').textContent || 'Setup')
+    : !$('s-home').hidden && typeof homeStep !== 'undefined' && homeStep === 'settings' && homeTab === 'team' ? 'Back to Team' : 'Back to Menu';   // the card closes onto the screen it opened from: the setup's step (Back to Difficulty), Team and Settings' Team tab
   const card = $('m-store').querySelector ? $('m-store').querySelector('.card') : null;
   if (card) { card.classList.toggle('solo', !$('st-offers').innerHTML); if (!$('m-store').hidden) careerFit(card); }   // nothing on offer: one column; a long title steps down to fit (careerFit, ui-career.js)
 }

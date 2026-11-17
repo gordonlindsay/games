@@ -175,7 +175,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   X.save();
   ok(JSON.stringify(saved().champ) === c0 && JSON.stringify(saved().career) === cr0, 'and in the save');
   S.setTier(null); D.goHome();
-  ok(!$('b-champ').classList.contains('locked') && !$('b-career').classList.contains('locked') && !$('b-comps').classList.contains('locked') && !$('b-continue').classList.contains('locked') && $('b-grown').hidden && !$('hp-settings').classList.contains('grown'), 'back on the full tier the locks and Grown-Ups go');
+  ok(!$('b-champ').classList.contains('locked') && !$('b-career').classList.contains('locked') && !$('b-comps').classList.contains('locked') && !$('b-match').classList.contains('locked') && /^Continue · /.test($('game-note').textContent) && $('b-grown').hidden && !$('hp-settings').classList.contains('grown'), 'back on the full tier the locks and Grown-Ups go (Game, where the home\'s Continue was before 1.10, unlocked with its Continue note)');
   $('b-champ').click();
   ok($('m-store').hidden && !$('s-hub').hidden, 'and Continue Championship goes to the hub');
   D.goHome();

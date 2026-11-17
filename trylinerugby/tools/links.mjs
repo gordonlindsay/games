@@ -15,7 +15,7 @@ import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 process.env.SEED ??= '73';
-const { T, rndCalls } = await import('./harness.mjs');
+const { T, rndCalls, fire } = await import('./harness.mjs');
 const F = T.profile, D = T.debug, X = T.teams, H = T.home, C = T.career, K = T.cups, P = T.picker, S = T.store, $ = id => document.getElementById(id);
 let passed = 0, failed = 0;
 const ok = (cond, msg) => { if (cond) passed++; else { failed++; console.log('FAIL', msg); } if (process.env.VERBOSE) console.log(cond ? 'ok  ' : 'FAIL', msg); };
@@ -45,7 +45,18 @@ const flHeads = () => FL().cols.map(c => c.head).join();
   ok($('my-box').classList.contains('none') && !$('my-none').hidden && $('my-box').getAttribute('aria-label') === 'My Team', 'the home\'s box: My Team and Pick Your Club, nothing else');
   ok(H.myPool() === null && H.myIs(X.CLUBS[0]) === false && !H.myIs(null) && H.myIs(X.NATIONS.find(n => n.id === 'ENG')), 'no club side is My Team\'s (the country still England)');
   $('b-mypick').click();
-  ok(shown() === 's-teams' && D.pickMode() === 'my' && FL().open && FL().top && !FL().embed && flHeads() === 'Area,Country,League,Teams' && FL().cols[0].sel === -1, `Pick Your Club: My Team's picker, its Filter at the top, no area chosen (${flHeads()})`);
+  ok(shown() === 's-teams' && D.pickMode() === 'my' && FL().open && FL().top && !FL().embed && flHeads() === 'Area,Country,League,Clubs' && FL().cols[0].sel === -1 && P.findWord() === 'Clubs' && $('fl-q').placeholder === 'Search Clubs', `Pick Your Club: My Team's picker, its Filter at the top, no area chosen, Search Clubs (${flHeads()})`);
+  { // its list and its counts are clubs, as the setup's are: no nation (a country stays under Area, Country, National)
+    const az = FL().cols[3], cnt = () => ['Northern', 'Southern'].map(h => +(new RegExp(`aria-label="${h} Hemisphere, ([\\d]+) Clubs"`).exec($('fl-cols').innerHTML) || [])[1]);
+    const top = cnt();
+    ok(az.all > 0 && az.az.every(h => !X.isNation(h.t)) && top.every(n => n > 0), `the A to Z column and the Area counts: clubs only, read out as Clubs (Northern ${top[0]}, Southern ${top[1]})`);
+    P.filterType('eng'); ok(FL().hits.length > 0 && FL().hits.every(h => !X.isNation(h.t)) && / Clubs$/.test($('fl-said').textContent), `Search Clubs finds clubs only, no England (${FL().hits.slice(0, 3).map(h => h.t.name)}; ${$('fl-said').textContent})`); P.filterType('');
+    P.filterClose(); ok(!X.isNation(P.view(0).team) && !P.view(0).team.act && $('t-title').textContent === 'Pick Your Club', `closed with no club: the card on the ladder's first club (${P.view(0).team.name}), Pick Your Club, never a country`);
+    D.openTeams('quick'); ok(FL().top && P.findWord() === 'Teams' && FL().cols[3].az.some(h => X.isNation(h.t)), 'Quick Match\'s Filter at the top still lists every side, nations too, Search Teams'); P.filterClose();
+    fresh(); F.open(); F.answer('adult'); F.answer('male'); F.answer('normal');
+    const set = cnt(); ok(json(top) === json(set), `Pick Your Club's hemispheres count what the setup's Club does (${json(top)} v ${json(set)})`);
+    fresh(); $('b-mypick').click();
+  }
   P.filterTap(3, FL().cols[3].az.findIndex(h => h.t.id === 'BTH'));
   ok(st.myClub === 'BTH' && H.myClub().id === 'BTH' && !FL().open, 'one tap on a club in the A to Z column picks it: Bath is My Team');
   fresh();
@@ -81,9 +92,13 @@ const flHeads = () => FL().cols.map(c => c.head).join();
   $('pf-team').click(); ok(D.pickMode() === 'my' && FL().open && FL().top, 'which opens My Team\'s picker at the top'); P.filterClose(); $('t-back').click(); ok(shown() === 's-profile', 'and comes back');
   ok(F.lookClub() === null && H.PLAIN.kit === '#888888', 'the look\'s kit with no club: plain (MY_PLAIN)');
   fresh();
-  // the Team tab with no club: My Team, Change still to My Profile
+  // the Team tab with no club: My Team, Change still to My Profile (the way to the look), whose own row is Pick Your Club
   $('b-set').click(); $('ts-tab-team').click();
   ok(H.tab() === 'team' && $('ts-name').textContent === 'My Team' && $('ts-shirt').hidden && $('b-my').getAttribute('aria-label') === 'Change My Profile', 'Team and Settings\' Team tab with no club: My Team, no shirt, Change to My Profile');
+  $('b-my').click(); ok(shown() === 's-profile' && $('pf-team').textContent === 'Pick Your Club', 'which opens My Profile, Pick Your Club on its row');
+  { const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8'), say = id => (new RegExp(`id="${id}"[^>]*>([^<]*)<`).exec(html) || [])[1];
+    ok(['pf-back', 'lk-back', 'cab-back'].every(id => say(id) === 'Back to Team'), `My Profile, the Locker and the Trophy Cabinet, each opened from the Team tab and going back to it: Back to Team, where it said Back to Menu (${['pf-back', 'lk-back', 'cab-back'].map(say).join(', ')})`); }
+  $('pf-back').click(); ok(shown() === 's-home' && H.step() === 'settings' && H.tab() === 'team', 'Back to Team: the Team tab again');
   $('my-box').click(); ok(H.step() === 'settings', 'the box with no club is not itself a button: pressing it leaves the tab as it was');
   D.goHome(); $('my-box').click(); ok(H.step() === null, 'and on the tiles does nothing (Pick Your Club inside it does)');
   // the Super Fan's purchase is a club choice
@@ -174,7 +189,12 @@ const flHeads = () => FL().cols.map(c => c.head).join();
   S.setTier('free'); D.goHome();
   F.open(); F.answer('adult'); F.answer('male'); F.answer('hard');
   ok(!$('m-store').hidden && S.ui().feature === 'hard' && F.run().level === null && F.STEPS[F.run().step].id === 'level', 'Hard on the free tier: the Unlock card, nothing picked, the step waiting');
-  S.close(); S.setTier(null); F.answer('hard');
+  ok($('st-back').textContent === 'Back to Difficulty', `the card's Back names the step it closes onto: Back to Difficulty (${$('st-back').textContent})`);
+  S.close(); F.end(false); D.goHome(); $('b-set').click(); $('ts-tab-team').click(); $('b-import').click();
+  ok(!$('m-store').hidden && $('st-back').textContent === 'Back to Team', `Add Your Team's Unlock card from the Team tab: Back to Team (${$('st-back').textContent})`);
+  S.close(); $('ts-tab-game').click(); document.querySelectorAll('.seg[data-key]').find(g => g.dataset.key === 'diff').children[3].click();
+  ok(!$('m-store').hidden && S.ui().feature === 'hard' && $('st-back').textContent === 'Back to Menu', `Hard's from the Game tab: Back to Menu, as Settings' was (${$('st-back').textContent})`);
+  S.close(); D.goHome(); F.open(); F.answer('adult'); F.answer('male'); S.setTier(null); F.answer('hard');
   ok(F.run().level === 'hard' && F.STEPS[F.run().step].id === 'club', 'Hard with the Full Game: picked');
   F.skip(); F.end(false); ok(st.diff === 2 && !st.kids, 'the setup ended on Hard');
   fresh();
@@ -217,6 +237,15 @@ const flHeads = () => FL().cols.map(c => c.head).join();
   location.hash = '#top'; tidy.length = 0; ok(L.boot() === null && !tidy.length, 'any other hash: left alone');
   location.hash = '#x=1&club=FAR'; ok(L.read().id === 'FAR', 'the club among other parts of a hash');
   location.hash = '?club=FAR'; ok(L.read() === null, 'a query is not a link (the service worker sends a query to the network: sw.js)');
+  location.hash = '#club=Old%20Alleynians'; ok(L.read().id === 'OAE' && L.find('old alleynians').id === 'OAE' && L.find('OLD-ALLEYNIANS').id === 'OAE', 'a name as typed or encoded (Old%20Alleynians): its slug, Old Alleynians');
+  ok(L.find('melbourne').id === 'MEL' && L.find('wellington').id === 'WLG' && L.find('melbourne-derbys').id === 'MEB' && L.find('MEB').id === 'MEB' && L.find('wellington-som').id === 'WEI', 'a club\'s own name before another\'s full name: Melbourne is Melbourne, Melbourne Derbys (full name Melbourne) by its own slug or its code');
+  // a link opened in a tab where the game is open already: the hash changes, the page stays
+  st.myClub = 'FAR'; D.goHome(); location.hash = '#club=bath'; tidy.length = 0; fire('hashchange');
+  ok(L.card() && $('ln-q').textContent === 'Make Bath My Team?' && tidy.length === 1, 'the hash changed with the game open: read as at the start, taken off, asked on the home'); L.close(false);
+  D.openTeams('quick'); P.filterShut(); location.hash = '#club=bath'; fire('hashchange');
+  ok(!L.card() && shown() === 's-teams', 'during a pick (or a match): nothing asked over it');
+  $('t-back').click(); ok(shown() === 's-home' && L.card() && $('ln-q').textContent === 'Make Bath My Team?', 'asked as the home comes back'); L.close(false);
+  D.goHome(); ok(!L.card(), 'and only once'); st.myClub = null; D.goHome();
   delete globalThis.location; delete globalThis.history;
   const sw = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8'), boot = fs.readFileSync(new URL('../src/boot.js', import.meta.url), 'utf8');
   ok(/linkBoot\(\);/.test(boot) && boot.indexOf('profileBoot();') < boot.indexOf('linkBoot();'), 'boot.js reads the link once, after the setup may have opened');
@@ -337,7 +366,49 @@ async function browserChecks() {
         T.picker.filterClose(); T.debug.goHome();
         return out;
       }, MEASURE.toString());
-      ok(quick.open && quick.close && quick.heads === 'Area,Country,League,Teams' && !quick.m.small.length && !quick.m.off.length && !quick.m.wide, `${kind}: Quick Match with no club: the Filter's card at its top, Close in reach, every target 44px (${quick.heads}; ${JSON.stringify(quick.m)})`);
+      ok(quick.open && quick.close && quick.heads === 'Area,Country,League,Teams' && !quick.m.small.length && !quick.m.off.length && !quick.m.wide && !quick.m.cut.length, `${kind}: Quick Match with no club: the Filter's card at its top, Close in reach, every target 44px, nothing cut (Northern Hemi beside a count of three figures where the column is narrow) (${quick.heads}; ${JSON.stringify(quick.m)})`);
+      // the home's Pick Your Club: the same card, its list clubs only (Search Clubs)
+      const mine = await page.evaluate(MEASURE => {
+        const T = window.__tryline, $ = id => document.getElementById(id);
+        T.debug.goHome(); $('b-mypick').click();
+        const f = $('m-filter'), out = { open:!f.hidden && f.classList.contains('fl-top'), heads:[...f.querySelectorAll('.fl-h')].map(e => e.textContent).join(), q:$('fl-q').placeholder, areas:[...f.querySelectorAll('[data-col="0"]')].map(b => b.getAttribute('aria-label')) };
+        out.m = (new Function('return (' + MEASURE + ')()'))();
+        T.picker.filterClose(); T.debug.goHome();
+        return out;
+      }, MEASURE.toString());
+      ok(mine.open && mine.heads === 'Area,Country,League,Clubs' && mine.q === 'Search Clubs' && mine.areas.slice(0, 2).every(l => / Clubs$/.test(l)) && !mine.m.small.length && !mine.m.off.length && !mine.m.wide && !mine.m.cut.length, `${kind}: the home's Pick Your Club: the Filter at its top, Search Clubs, its Area counts clubs, nothing cut (${mine.heads}; ${mine.areas.join(' | ')}; ${JSON.stringify(mine.m)})`);
+      // the keyboard and a controller reach it as the Filter always has: Enter on Quick Match puts the focus in Search; A puts the ring in it
+      await page.evaluate(() => { const T = window.__tryline; T.debug.goHome(); T.home.open('match'); document.getElementById('b-quick').focus(); });
+      await page.keyboard.press('Enter'); await page.waitForTimeout(150);
+      const kb = await page.evaluate(() => { const a = document.activeElement; const r = [!document.getElementById('m-filter').hidden, a && a.id]; window.__tryline.picker.filterClose(); return r; });
+      const pad = await page.evaluate(() => {
+        const T = window.__tryline, $ = id => document.getElementById(id); T.debug.goHome(); T.debug.setDev('pad'); T.home.open('match'); T.home.ring($('b-quick')); $('b-quick').click();
+        const ring = document.querySelector('.padfocus'), r = [!$('m-filter').hidden, !!ring && $('m-filter').contains(ring)];
+        T.home.ring(null); T.debug.setDev('touch'); T.picker.filterClose(); T.debug.goHome(); return r;
+      });
+      ok(kb[0] && kb[1] === 'fl-q' && pad[0] && pad[1], `${kind}: Quick Match's Filter at the top from the keyboard (Enter: the focus in Search) and from a controller (A: the ring on its rows) (${json([kb, pad])})`);
+      // Game's note fitted after a redraw with no homeFit of its own (the store's prices, Add Your Team shut, My Profile): never cut
+      const note = await page.evaluate(() => {
+        const T = window.__tryline, X = T.teams, $ = id => document.getElementById(id), n = $('game-note');
+        const c = document.createElement('canvas').getContext('2d'); c.font = getComputedStyle(n).font;
+        const opp = X.CLUBS.slice(1).sort((a, b) => c.measureText(b.name).width - c.measureText(a.name).width)[0];
+        X.newChamp(X.CLUBS[0], [opp, ...X.CLUBS.slice(1, 6).filter(t => t !== opp)].slice(0, 5)); T.debug.goHome();
+        const u = X.champ(), fx = u.fixtures[0].find(f => f.includes(u.user)), them = u.teams[fx[0] === u.user ? fx[1] : fx[0]].name;
+        const at = () => ({ t:n.textContent, over:n.scrollWidth > n.clientWidth + 0.5 && !n.classList.contains('two') });
+        const home = at(); T.store.refresh(); const after = at(); X.setChamp(null); T.debug.goHome();
+        return { them, home, after };
+      });
+      // Game's step with a championship saved: Continue Championship across its top, the focus on it, a controller's moves in and out of it
+      const gstep = await page.evaluate(() => {
+        const T = window.__tryline, X = T.teams, $ = id => document.getElementById(id), r = el => el.getBoundingClientRect();
+        X.newChamp(X.CLUBS[0], X.CLUBS.slice(1, 6)); T.debug.goHome(); $('b-match').click();
+        const g = $('b-gcont'), q = $('b-quick'), c = $('b-comps'), out = { focus:document.activeElement && document.activeElement.id, shown:!g.hidden && r(g).height >= 47.5, across:Math.abs(r(g).left - r(q).left) < 1 && Math.abs(r(g).right - r(c).right) < 1 && r(g).bottom <= r(q).top, halves:Math.abs(r(q).width - r(c).width) < 1 };
+        T.debug.setDev('pad'); const mv = (from, dx, dy) => { T.home.ring($(from)); const to = T.navMove(0, dx, dy); return to && to.id; };
+        out.moves = [mv('hs-back', 0, 1), mv('b-gcont', 0, 1), mv('b-quick', 0, -1), mv('b-comps', 0, -1), mv('b-gcont', 0, -1)];
+        T.home.ring(null); T.debug.setDev('touch'); X.setChamp(null); T.debug.goHome(); return out;
+      });
+      ok(gstep.focus === 'b-gcont' && gstep.shown && gstep.across && gstep.halves && json(gstep.moves) === json(['b-gcont', 'b-quick', 'b-gcont', 'b-gcont', 'hs-back']), `${kind}: Game's step with a championship saved: Continue Championship across the top, 48px, the focus on it, Quick Match | Competitions in halves under it; Down from Back on it, Down from it on Quick Match, Up from either half on it, Up from it on Back (${json(gstep)})`);
+      ok(!note.home.over && !note.after.over && note.after.t === note.home.t && note.after.t.endsWith('v ' + note.them), `${kind}: Game's Continue note fitted on the home and again after the store redraws it (the opponent never cut) (${json(note)})`);
       ok(!errors.length, `${kind}: no page errors (${errors.join('; ')})`);
       await ctx.close();
     }
