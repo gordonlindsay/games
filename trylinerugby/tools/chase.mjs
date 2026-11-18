@@ -287,7 +287,11 @@ if (run && !args.length) {
    step down, play three of these matches, so the pins below move with it (R_). With LOCAL off (1.6) and with the rerating off (8089294)
    this build gives the pins as they were exactly (each in a child: rerateProofs). */
 const R_BASE = 'd0efoc 1fq8pyd 1j02me5 1cc96uv hcpa8a 8r239s 8v7e62 1yjp1u0 1t4l7sj', R_ON = '8iyx7a pemluk 1j02me5 1cc96uv 1phqv xgmaru 8v7e62 1yjp1u0 9ajr81';
-const R_ON_REACT = '1707leb fsophx 1j02me5 1cc96uv j9umex 1c7w2p5 8v7e62 1yjp1u0 1m2h5h5', R_SHIPS = '1iku6ik gn95mi 16eizcc ha15tj 1si6ekf 12lzpp8 g4716q pqi14u 4rfqdz';
+const R_ON_REACT = '1707leb fsophx 1j02me5 1cc96uv j9umex 1c7w2p5 8v7e62 1yjp1u0 1m2h5h5', R_SHIPS = '1iku6ik gn95mi 10nbbke 1c0o0nk 9q1u8p 9duqwv 1q2xuhl bkswl5 afl9p6';
+// R_SHIPS re-pinned at the ruck picker (1.10.1, RUCKPICK, src/duels.js): the tool's match, Easy, Normal and Hard as played, Kids and Two Player, where
+// your side's rucks have a picker, moved, and the count of draws with them; AI v AI and the demo did not. With RUCKPICK off this build gives
+// R_SHIPS_RUCK, 8fb3bc0's pin, exactly (checked below); R_BASE, R_ON, R_ON_REACT and the older pins are builds before it, so they are checked with it off
+const R_SHIPS_RUCK = '1iku6ik gn95mi 16eizcc ha15tj 1si6ekf 12lzpp8 g4716q pqi14u 4rfqdz';   // 8fb3bc0 (1.10)
 begin('0 CHASE off is b4a25d5');
 {
   // the late start at react 0 is a no-op: a build with its line cut (CHASE_LATE=off in the harness) as the chase ships, and at react 0.2;
@@ -297,10 +301,14 @@ begin('0 CHASE off is b4a25d5');
     let s = '', e = ''; p.stdout.on('data', d => { s += d; }); p.stderr.on('data', d => { e += d; });
     p.on('close', code => good(code ? 'failed: ' + e.trim().split('\n').pop() : s.trim()));
   });
-  const cut = LOCAL_CHILD ? null : Promise.all([child({ CHASE_LATE:'off' }), child({ CHASE_LATE:'off', CHASE:'{"react":0.2}' }), child({ CHASE_LATE:'off' }, 'ships')]);
+  const RUCK_OFF = { RUCKPICK:'{"on":false}' };            // the ruck picker (1.10.1): off for every build before it (b4a25d5, wt/chase, 98e11c8), as in the children (offRun)
+  const cut = LOCAL_CHILD ? null : Promise.all([child({ CHASE_LATE:'off', ...RUCK_OFF }), child({ CHASE_LATE:'off', CHASE:'{"react":0.2}', ...RUCK_OFF }), child({ CHASE_LATE:'off' }, 'ships')]);
+  const RP = T.contact.RUCKPICK, RP0 = !!(RP && RP.on); if (RP) RP.on = false;
   if (CLS) CLS.on = false;                                // the chase's own proof with the possession calls off: b4a25d5 with both off, wt/chase's pins with the chase alone
   setC({ on:false }); const off = pins(); reset(); const on = pins(); setC({ react:0.2 }); const react = pins(); reset();
-  if (CLS) CLS.on = CLS0; const ships = pins();
+  if (CLS) CLS.on = CLS0; const ships0 = pins();
+  if (RP) RP.on = RP0; const ships = RP0 ? pins() : ships0;
+  if (RERATE && RP0) ok(ships0 === R_SHIPS_RUCK, `with the ruck picker as 1.10 (RUCKPICK off), as 8fb3bc0 (${ships0}, pinned ${R_SHIPS_RUCK})`);
   if (LOCAL_CHILD) { console.log([off, on, react, ships].join(' / ')); process.exit(0); }   // the LOCAL children (rerateProofs): their pins, checked against these
   if (LOCAL_ON) await rerateProofs(new URL(import.meta.url), [BASE, ON, ON_REACT, SHIPS].join(' / '), ok);
   const [b, o, rc, sh] = RERATE ? [R_BASE, R_ON, R_ON_REACT, R_SHIPS] : [BASE, ON, ON_REACT, SHIPS];

@@ -7,7 +7,7 @@
 // GAME=/path/to/index.html HOME_PRINT=1 node tools/home.mjs prints section 0's fingerprint for that build and stops: how BASE was pinned.
 // CLUB_RATED=off HOME_PRINT=1 node tools/home.mjs prints it with no club rated from PR #14's tables: the proof behind the last re-pin.
 process.env.SEED ??= '61';
-const { T, reseed, bot, LOCAL_ON, RERATE, LOCAL_CHILD, rerateProofs } = await import('./harness.mjs');
+const { T, reseed, bot, LOCAL_ON, RERATE, LOCAL_CHILD, rerateProofs, ruckpickProof } = await import('./harness.mjs');
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
@@ -27,7 +27,8 @@ const BASE = '1us0pm8 7yj4mb 42zhl6 bs1ooc 1tf14do';   // 1.6 (2026-11-14): the 
 /* BASE re-pinned for the owner's rerating (LOCAL, 14 Nov 2026: "rerate the lower clubs - farnham shouldnt be as high as they are"):
    Farnham and Haslemere, a step down, play three of these matches, so it moves to R_BASE. With LOCAL off (1.6) and with the rerating off
    (8089294) this build gives BASE exactly, LOCAL off the chain below too (each in a child: rerateProofs). */
-const R_BASE = '1us0pm8 1utlxki 18tlkfu 1skpr8k 1tf14do';
+const R_BASE = '1us0pm8 14nzmes tojayw 1jah6v0 1tf14do';   // re-pinned at the ruck picker (1.10.1, RUCKPICK, src/duels.js): the tool's match, the arcade Quick Match and the championship match, where the bot plays your side's rucks, moved; AI v AI and the demo did not. With RUCKPICK='{"on":false}' this build gives BEFORE_RUCKPICK, 8fb3bc0's pin, exactly (checked first, in a child: ruckpickProof)
+const BEFORE_RUCKPICK = '1us0pm8 1utlxki 18tlkfu 1skpr8k 1tf14do';   // 8fb3bc0 (1.10)
 const WITH_CALLS = 'j0wk2h 7yj4mb 42zhl6 bs1ooc 1tf14do';   // the calls on and the chase off, wt/calls' pin (a032b3a): re-pinned for the possession calls and the interception rules (src/calls.js, 2026-11-13), which act everywhere on purpose (nobody intercepts out of the passer's hands, nobody down, retiring or offside plays the ball, and the calls count their tags)
 const WITH_CHASE = '183xhzi 1jp0mme p4313q 1nkecxo yvtiy8';   // the chase on and the calls off, wt/chase's pin (fc90ec0): re-pinned for the kick chase (src/chase.js, 2026-11-13), which acts on every open-play kick on purpose, and again the same day for its react 0 (pace alone, the owner's choice: CHASE='{"react":0.2}' gives 98e11c8's 183xhzi 1jp0mme p4313q x92eko yvtiy8)
 const BEFORE_CALLS_CHASE = '183xhzi 1jp0mme p4313q 319h47 yvtiy8';   // b4a25d5's pin, the calls and the chase both off: re-pinned for the knock-ons (src/knock.js, 2026-11-11), which act everywhere on purpose; with KNOCK='{"on":false}' (and the calls and the chase off) this build gives BEFORE_KNOCK, 20cbcaf's pin, exactly (checked first, below)
@@ -62,6 +63,7 @@ function fingerprint() {
   const now = fingerprint();
   if (process.env.HOME_PRINT || LOCAL_CHILD) { console.log(now); process.exit(failed ? 1 : 0); }   // the LOCAL children (rerateProofs) print theirs
   if (LOCAL_ON) await rerateProofs(new URL(import.meta.url), BASE, ok);
+  if (RERATE) await ruckpickProof(new URL(import.meta.url), BEFORE_RUCKPICK, ok);
   const pin = RERATE ? R_BASE : BASE;
   ok(now === pin, `AI v AI, a tool's match, an arcade Quick Match, a championship match and the demo play exactly as before the headlines (seeded fingerprint ${now}, pinned ${pin})`);
 }
@@ -115,7 +117,7 @@ const fresh = (club = 'FAR') => {
   const drills = [...home.matchAll(/<button class="btn drill" id="pr-([a-z]+)">/g)].map(m => m[1]);
   ok(json(drills) === json(T.drills.DRILLS.map(d => d.id)) && /<button class="btn drill" id="pr-defend">[\s\S]*?<\/button>\s*<button class="btn drill" id="b-help"><span class="dc-icon" aria-hidden="true"><svg viewBox="0 0 40 40">[\s\S]*?<\/svg><\/span><span class="dc-name">How to Play<\/span><\/button>\s*<\/div>\s*<div class="pr-low">\s*<div class="pr-contact" id="pr-contact">[\s\S]*?id="pr-back"[\s\S]*?<\/div>\s*<\/div>\s*<button class="btn drill pr-grown" id="pr-grown">/.test(home) && /\.hp-drills \.drills\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/.test(css), `Skill Games: every game in its picture (${drills.join(', ')}), How to Play, then the contact games and For Grown-Ups, in rows of four`);
   const sets = [...home.matchAll(/<div class="set(?: set-[a-z]+)?"(?: id="[a-z-]+")?><span class="lbl">([^<]+)<\/span><div class="seg" data-key="([a-z]+)"/g)].map(m => m[1] + ':' + m[2]);
-  ok(json(sets) === json(['Difficulty:diff', 'Sound:sound', 'Match Help:hints', 'Half Length:half', 'Camera:cam']) && /data-key="diff">[\s\S]*?<\/div><\/div>\s*<div class="set set-age"><span class="lbl" id="set-age-l">Age Group<\/span><div class="seg" id="set-age" role="group" aria-labelledby="set-age-l"><\/div><\/div>\s*<div class="set set-gender"><span class="lbl" id="set-gender-l">Gender<\/span><div class="seg" id="set-gender" role="group" aria-labelledby="set-gender-l"><\/div><\/div>\s*<div class="set set-sound">/.test(home) && /data-key="hints"[^>]*><button>On<\/button><button>Off<\/button><\/div><\/div>\s*<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>\s*<div class="set set-half">/.test(home) && /data-key="cam"><button>Top<\/button><button>Low<\/button><button>Mid<\/button><button>High<\/button><\/div><\/div>\s*<p class="ver" id="ver">Version 1\.10<\/p>\s*<\/div>\s*<\/div>\s*<\/div>\s*<\/section>/.test(home)
+  ok(json(sets) === json(['Difficulty:diff', 'Sound:sound', 'Match Help:hints', 'Half Length:half', 'Camera:cam']) && /data-key="diff">[\s\S]*?<\/div><\/div>\s*<div class="set set-age"><span class="lbl" id="set-age-l">Age Group<\/span><div class="seg" id="set-age" role="group" aria-labelledby="set-age-l"><\/div><\/div>\s*<div class="set set-gender"><span class="lbl" id="set-gender-l">Gender<\/span><div class="seg" id="set-gender" role="group" aria-labelledby="set-gender-l"><\/div><\/div>\s*<div class="set set-sound">/.test(home) && /data-key="hints"[^>]*><button>On<\/button><button>Off<\/button><\/div><\/div>\s*<button class="btn" id="b-grown" hidden>Grown-Ups<\/button>\s*<div class="set set-half">/.test(home) && /data-key="cam"><button>Top<\/button><button>Low<\/button><button>Mid<\/button><button>High<\/button><\/div><\/div>\s*<p class="ver" id="ver">Version 1\.10\.1<\/p>\s*<\/div>\s*<\/div>\s*<\/div>\s*<\/section>/.test(home)
     && /\.hp-settings\.settings\{display:grid;grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/.test(css) && /\.hp-settings \.set\{grid-template-columns:1fr;gap:4px;grid-column:span 3\}/.test(css) && /\.hp-settings \.set-diff\{grid-column:1\/-1\}/.test(css) && /\.hp-settings\.grown \.set-sound,\.hp-settings\.grown \.set-hints,\.hp-settings #b-grown\{grid-column:span 2\}/.test(css)
     && /\.hp-settings\.settings \.set-cam,\.hp-settings\.settings \.ver\{grid-row:4;grid-column:4\/-1\}/.test(css),
     `Settings: ${sets.join(', ')}; Difficulty across, Age Group | Gender (the profile's, src/profile.js), Sound | Match Help, Half Length | Camera in halves, and Grown-Ups (where the store is live) a third of Sound's row, after Match Help; the game's version at its foot, on the fourth row's label line`);

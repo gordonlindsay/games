@@ -361,6 +361,64 @@ begin('ruck control');
     }
   }
   ok(placed, 'a placed carrier could be kept by the attack');
+  // 1.10.1 (RUCKPICK): the owner's "occasionally it snaps back to another player who is through on goal away from others". A thumb still
+  // pushing forward from the run, the picker a support runner at the carrier's shoulder and the defence on its ruck line (the case the
+  // repro found: the ball out to him 4 to 7m past the line, with no pass). Now the stick moves him only inside the box behind the ball
+  const RP = C.RUCKPICK, RP0 = snap(RP);
+  ok(RP.on === true && RP.ahead === 0.5 && RP.wide === 5, `RUCKPICK ships on, ${RP.ahead}m back from the ruck line and ${RP.wide}m either side of the mark`);
+  const held = (wide, len) => {   // { past, aside, maxPast, maxAside, passes, carrier } for the stick held forward through the ruck, or null when no try stuck
+    for (let i = 0; i < 12; i++) {
+      fresh(1); noJolt(); RUCK.pen = 0; M().diff.turnover = -1;
+      const kk = bind(FRONT, 'ai', 'wrap'), m2 = kk.own[1]; park(kk, m2);
+      const dd = dirOf(kk.c.team); m2.x = kk.c.x - dd*1.0; m2.y = kk.c.y + wide; m2.vx = dd*7; m2.vy = 0;   // at his shoulder, 1m back and `wide` m out, at 7 m/s
+      if (!toRuck() || M().set.picker !== m2) continue;
+      const s = M().set, d2 = dirOf(s.team); s.t = len;
+      const tg = C.computeTargets(); for (const q of M().players) if (q.team !== s.team && q.down <= 0 && !q.bind) { const t = tg.get(q); if (t) { q.x = t.x; q.y = t.y; q.vx = q.vy = 0; } }   // the defence on its ruck line
+      const p0 = M().stats.passes || 0; let maxPast = -99, maxAside = 0;
+      run(() => M().phase !== 'set', 120, () => { inp.jx = 1; inp.jy = 0; if (M().phase === 'set') { maxPast = Math.max(maxPast, (m2.x - s.x)*d2); maxAside = Math.max(maxAside, Math.abs(m2.y - s.y)); } });
+      inp.jx = inp.jy = 0;
+      const b = M().ball, c = b.state === 'held' ? b.carrier : null;
+      if (!c || c.team !== s.team) continue;   // the 3% turnover floor: kept only, as the loops above
+      return { carrier:c === m2, past:(c.x - s.x)*d2, aside:Math.abs(c.y - s.y), maxPast, maxAside, passes:(M().stats.passes || 0) - p0 };
+    }
+    return null;
+  };
+  const h4 = held(4, RUCK.t.normal);
+  ok(h4 && h4.carrier && h4.passes === 0, 'the stick held forward through a ruck: the picker still takes the ball, with no pass');
+  ok(h4 && h4.past <= -RP.ahead + 1e-9 && h4.aside <= RP.wide + 1e-9, `and it comes out at the base: ${h4 ? h4.past.toFixed(2) : '-'}m past the ruck line (at most -${RP.ahead}), ${h4 ? h4.aside.toFixed(2) : '-'}m aside (at most ${RP.wide})`);
+  ok(h4 && h4.maxPast <= 0 && h4.maxAside <= RP.wide + 1e-9, `and never past the ruck line or wider than ${RP.wide}m while it is down (furthest ${h4 ? h4.maxPast.toFixed(2) : '-'}m past, ${h4 ? h4.maxAside.toFixed(2) : '-'}m aside)`);
+  const h6 = held(6.5, RUCK.t.normal);
+  ok(h6 && h6.carrier && h6.past <= -RP.ahead + 1e-9 && near(h6.aside, RP.wide, 1e-9) && h6.passes === 0, `a picker standing 6.5m wide, stick forward: he takes it on the box's edge, ${h6 ? h6.aside.toFixed(2) : '-'}m aside and ${h6 ? h6.past.toFixed(2) : '-'}m past the line`);
+  // RUCKPICK off: 1.10 (8fb3bc0), the stick drives him on through the gap and the ball appears on him there
+  RP.on = false;
+  const h4off = held(4, RUCK.t.normal);
+  ok(h4off && h4off.carrier && h4off.past > 2 && h4off.passes === 0, `RUCKPICK off is the old game: the same thumb gets the ball ${h4off ? h4off.past.toFixed(2) : '-'}m past the ruck line, with no pass`);
+  restore(RP, RP0);
+  // the picker comes from behind the ball: a man nearer the mark but ahead of the ruck line is passed over, and the nearest of all only
+  // when nobody is behind it. startSet's choice, run again on the ruck's own set with the men placed
+  let chose = false;
+  for (let i = 0; i < 12 && !chose; i++) {
+    fresh(1); noJolt(); RUCK.pen = 0; M().diff.turnover = -1;
+    const kk = bind(FRONT, 'ai', 'wrap'), m2 = kk.own[1], fwd = kk.own[2]; park(kk, m2);
+    if (!toRuck()) continue;
+    chose = true;
+    const s = M().set, d2 = dirOf(s.team), mk = C.playFrom(s.team, s.x, s.y, 'ruck');
+    const place = () => { m2.x = s.x - d2*5; m2.y = s.y; fwd.x = s.x + d2*1.0; fwd.y = s.y + 0.5; for (const p of [m2, fwd]) { p.vx = p.vy = 0; p.down = 0; p.bind = null; } };
+    const pick = () => { const o = { ...s }; delete o.picker; place(); C.startSet(o); return o.picker; };
+    place();
+    ok(dist(fwd, mk) < dist(m2, mk) && (fwd.x - s.x)*d2 > 0 && (m2.x - s.x)*d2 < 0, `staged: one man ${dist(fwd, mk).toFixed(2)}m from the mark but ahead of the ball, one ${dist(m2, mk).toFixed(2)}m off behind it`);
+    const r0 = rndCalls(), on = pick();
+    ok(on === m2 && M().ctrl === m2 && rndCalls() === r0, 'the picker is the nearest man behind the ball, not the nearer one ahead of it, and choosing draws nothing');
+    RP.on = false; const off = pick(); restore(RP, RP0);
+    ok(off === fwd, 'RUCKPICK off is the old choice: the nearest man to the mark, ahead of the ball or not');
+    const rest = kk.own.filter(p => p !== kk.c && p.down <= 0 && !p.bind);
+    for (const p of rest) { p.x = s.x + d2*(3 + rest.indexOf(p)); p.y = s.y + 2; }
+    const o = { ...s }; delete o.picker; C.startSet(o);
+    const nearAll = rest.reduce((a, p) => (dist(p, mk) < dist(a, mk) ? p : a));
+    ok(o.picker === nearAll, 'with nobody behind the ball, the nearest of all');
+  }
+  ok(chose, 'a ruck could be staged for the picker\'s choice');
+  restore(RP, RP0);
   // a turnover still goes to the other side. resolveRuck draws the same rolls; the placed man does not keep it
   let turned = false;
   for (let i = 0; i < 80 && !turned; i++) {

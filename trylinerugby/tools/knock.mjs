@@ -164,13 +164,17 @@ if (run && !args.length) {
    play several of these matches, so BASE, ON and SHIPS move to R_BASE, R_ON and R_SHIPS. With LOCAL off (1.6) and with the rerating off
    (8089294) this build gives BASE, ON and SHIPS exactly, and LOCAL off the whole chain as before (each in a child: rerateProofs). */
 const R_BASE = 'gfkiiv af2q5q rj1jts xc3q2t 1sgvx41 3whr8x 1en25jn 1qes7af 1xat9ht', R_ON = '3mv681 e4k4jm tf5qza 1oy4gdg ksahst ot75uq 1hd7vrl 1xu8bt5 1mw31sj';
-const R_SHIPS = '1pqg3nt 1mxxcjd otz3w8 7arb53 2b8eir 1r6tbn6 pohjwb j1esqw txdx7p';
+const R_SHIPS = '1pqg3nt 1mxxcjd reoxwv s9juxo 57fdqg ykjctb 1w1p2cy 157s20v 1uj7yyn';   // re-pinned at the ruck picker (1.10.1, RUCKPICK, src/duels.js): the tool's match, Easy, Normal and Hard as played, Kids and Two Player, where your side's rucks have a picker, moved, and the count of draws with them; AI v AI and the demo did not. With RUCKPICK off this build gives R_SHIPS_RUCK, 8fb3bc0's pin, exactly (checked below); R_BASE, R_ON and the older pins are builds before it, so they are checked with it off
+const R_SHIPS_RUCK = '1pqg3nt 1mxxcjd otz3w8 7arb53 2b8eir 1r6tbn6 pohjwb j1esqw txdx7p';   // 8fb3bc0 (1.10)
 begin('0 KNOCK off is 20cbcaf');
 if (LOCAL_ON) {
   const feats = (cl, cs) => { if (CL) CL.on = cl; if (CS) CS.on = cs; };
-  feats(false, false);
+  const RP = T.contact.RUCKPICK, RP0 = !!(RP && RP.on);   // the ruck picker (1.10.1): off for every build before it, as in the children (offRun)
+  feats(false, false); if (RP) RP.on = false;
   setK({ on:false }); const off = pins(); reset(); const on = pins();
-  feats(CL0, CS0); const ships = pins();
+  feats(CL0, CS0); const ships0 = pins();
+  if (RP) RP.on = RP0; const ships = RP0 ? pins() : ships0;
+  if (RERATE && RP0) ok(ships0 === R_SHIPS_RUCK, `with the ruck picker as 1.10 (RUCKPICK off), as 8fb3bc0 (${ships0}, pinned ${R_SHIPS_RUCK})`);
   if (LOCAL_CHILD) { console.log([off, on, ships].join(' / ')); process.exit(failed ? 1 : 0); }   // the rerating off child (rerateProofs): 8089294's pins
   await rerateProofs(new URL(import.meta.url), [BASE, ON, SHIPS].join(' / '), ok);
   const [b, o, sh] = RERATE ? [R_BASE, R_ON, R_SHIPS] : [BASE, ON, SHIPS];
@@ -283,9 +287,15 @@ begin('3 one draw a catch');
     ok(one === n && held > 0 && dropped > 0, `every catch draws exactly one number before it decides (${one} of ${n}: ${held} held, ${dropped} knocked on, KNOCK on and off)`); }
   // a full match: up to the first catch whose outcome differs, every catch sees the same draw at the same point in the stream
   const trace = () => { const out = []; globalThis.__knockSpy = (w, q, v) => { if (w === 'catch') out.push([rndCalls(), v.r, v.r < v.pk]); }; play(77, X.NATIONS[0], X.NATIONS[3], { diff:1, duels:'live', arcade:true }); delete globalThis.__knockSpy; return out; };
-  const a = trace(); setK({ on:false }); const b = trace(); reset();
+  // seed 77's match as 8fb3bc0 played it (RUCKPICK off): as the game ships, the ruck picker moves the match and no catch in it falls
+  // between the two chances, so there is no first difference to reach (checked after, on the whole match)
+  const RP = T.contact.RUCKPICK, RP0 = !!(RP && RP.on);
+  if (RP) RP.on = false; const a = trace(); setK({ on:false }); const b = trace(); reset(); if (RP) RP.on = RP0;
   const first = a.findIndex((v, i) => !b[i] || v[2] !== b[i][2]);
   ok(first > 0 && a.slice(0, first + 1).every((v, i) => v[0] - a[0][0] === b[i][0] - b[0][0] && v[1] === b[i][1]), `a played match: its first ${first + 1} catches draw the same numbers at the same points, KNOCK on or off, up to the first one it holds that it dropped before`);
+  if (RP0) { const a2 = trace(); setK({ on:false }); const b2 = trace(); reset();
+    const f2 = a2.findIndex((v, i) => !b2[i] || v[2] !== b2[i][2]), upto = f2 < 0 ? a2.length : f2 + 1;
+    ok(a2.length > 0 && (f2 >= 0 || a2.length === b2.length) && a2.slice(0, upto).every((v, i) => v[0] - a2[0][0] === b2[i][0] - b2[0][0] && v[1] === b2[i][1]), `and as the game ships (the ruck picker on): ${upto} of its ${a2.length} catches draw the same numbers at the same points, KNOCK on or off${f2 < 0 ? ', the whole match' : ', up to the first whose outcome differs'}`); }
 }
 done('3 one draw a catch');
 

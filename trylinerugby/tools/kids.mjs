@@ -3,7 +3,7 @@
 // The rating's scale, its update rule, its bounds, its save and its gating are section 13; tools/kidbots.mjs calibrates it with scripted children.
 // node tools/kids.mjs   Exits 1 on any failure.
 process.env.SEED ??= '29';
-const { T, reseed, fire, kickBot, dropBot, bot, LOCAL_ON, RERATE, LOCAL_CHILD, rerateProofs } = await import('./harness.mjs');
+const { T, reseed, fire, kickBot, dropBot, bot, LOCAL_ON, RERATE, LOCAL_CHILD, rerateProofs, ruckpickProof } = await import('./harness.mjs');
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 const K = T.kids, D = T.debug, X = T.teams, C = T.contact, KK = T.kick, STEP = T.STEP, inp = T.input;
@@ -731,7 +731,11 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   // Re-pinned for the owner's rerating (LOCAL, 14 Nov 2026: "rerate the lower clubs - farnham shouldnt be as high as they are"): Farnham
   // 58 and Haslemere 43, a step down, so the matches they play here move. With LOCAL off (1.6) and with the rerating off (8089294) this
   // build gives BEFORE_LOCAL, 1.6's PIN, exactly, and the chain below holds with LOCAL off as it did (each in a child: rerateProofs)
-  const PIN = RERATE ? '1ckfie8 17jlh1u 7dpem6 1ojvcyi 1mx45p0 o24dg5 19781ts 1afo373' : 'ytai0c 7gbn71 16q2gdq kycu0e 1owh0p7 1db7d9g 19781ts 1afo373';
+  // Re-pinned at the ruck picker (1.10.1, RUCKPICK, src/duels.js: your side's ruck picker from behind the ball, kept in a box near its
+  // base): Quick Match on Normal at 2, 4 and 6 minutes, where the bot plays your side's rucks, moved; Easy, Hard, Two Player, AI v AI and
+  // the demo did not. With RUCKPICK='{"on":false}' this build gives BEFORE_RUCKPICK, 8fb3bc0's PIN, exactly (in a child: ruckpickProof)
+  const BEFORE_RUCKPICK = '1ckfie8 17jlh1u 7dpem6 1ojvcyi 1mx45p0 o24dg5 19781ts 1afo373';
+  const PIN = RERATE ? '1ckfie8 tpw9rf 7dpem6 1dgzt90 1ylbmb6 o24dg5 19781ts 1afo373' : 'ytai0c 7gbn71 16q2gdq kycu0e 1owh0p7 1db7d9g 19781ts 1afo373';
   const BEFORE_LOCAL = 'ytai0c 7gbn71 16q2gdq kycu0e 1owh0p7 1db7d9g 19781ts 1afo373';
   const WITH_CALLS = 'ytai0c 1vfa9il 17vh7h5 1h583yb 1owh0p7 1db7d9g 19781ts 1afo373';
   const WITH_CHASE = '7wl1n0 kq1d2 1c0yntb 1cco652 1klviba 1db7d9g fs1jc3 1j6lmbf';
@@ -773,6 +777,7 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
     const now = pin(); if (process.env.KIDS_PRINT) console.log('PIN', now);
     if (LOCAL_CHILD) { console.log(now); process.exit(failed ? 1 : 0); }   // the LOCAL children (rerateProofs) print theirs
     if (LOCAL_ON) await rerateProofs(new URL(import.meta.url), BEFORE_LOCAL, ok);
+    if (RERATE) await ruckpickProof(new URL(import.meta.url), BEFORE_RUCKPICK, ok);
     ok(now === want, `every other match plays as on 909fe3a: Quick Match off Kids at each level and length, Two Player, AI v AI and the demo (seeded fingerprint ${now}, pinned ${want})`); }
 
   // how long: the chosen half times the Kids pace, in simulated seconds, which is the chosen half in real time

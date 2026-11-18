@@ -12,7 +12,7 @@ import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { resultsServe } from './results-serve.mjs';
-const { T, reseed, rndCalls, bot, offRun, LOCAL_CHILD } = await import('./harness.mjs');
+const { T, reseed, rndCalls, bot, offRun, ruckpickProof, LOCAL_CHILD } = await import('./harness.mjs');
 const { readGameSource } = await import('./source.mjs');
 const C = T.career, X = T.teams, D = T.debug, L = T.careerLife, $ = id => document.getElementById(id);
 let passed = 0, failed = 0;
@@ -29,7 +29,8 @@ const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Ma
    they are"): Farnham 58 and Haslemere 43, a step down, so the two matches they play here move; the simulated pair does not. With
    LOCAL='{"on":false}' this build gives BEFORE_LOCAL, 1.6's pin, exactly, and the older pins below hold in that build as they did (both
    checked first, in a child: offRun). */
-const BASE = '1mhz589 d8ah04 173l2tk';
+const BASE = '1mhz589 1leak4h 6b9meg';   // re-pinned at the ruck picker (1.10.1, RUCKPICK, src/duels.js): the bot plays your side's rucks in the arcade and the plain match, so both moved; the simulated pair (AI v AI) did not. With RUCKPICK='{"on":false}' this build gives BEFORE_RUCKPICK, 8fb3bc0's pin, exactly (checked first, in a child: ruckpickProof)
+const BEFORE_RUCKPICK = '1mhz589 d8ah04 173l2tk';   // 8fb3bc0 (1.10)
 const BEFORE_LOCAL = '1mhz589 p83t0p 9cdfje';   // 1.6 (b9fa00d), LOCAL off   // 1.6 (2026-11-14): the possession calls and the interception rules (src/calls.js) and the kick chase (src/chase.js) together, as the game ships, both acting everywhere on purpose; with CALLS='{"on":false}' CHASE='{"on":false}' this build gives BEFORE_CALLS_CHASE, b4a25d5's pin, exactly; with the chase off alone, WITH_CALLS; with the calls off alone, WITH_CHASE (each checked first, below)
 const WITH_CALLS = 'lngm86 urw4hw 9cdfje';   // the calls on and the chase off, wt/calls' pin (a032b3a): re-pinned for the possession calls and the interception rules (src/calls.js, 2026-11-13), which act everywhere on purpose (nobody intercepts out of the passer's hands, nobody down, retiring or offside plays the ball, and the calls count their tags)
 const WITH_CHASE = '1c3imom u9u1l2 5y5h4';   // the chase on and the calls off, wt/chase's pin (fc90ec0): re-pinned for the kick chase (src/chase.js, 2026-11-13), which acts on every open-play kick on purpose, and again the same day for its react 0 (pace alone, the owner's choice: CHASE='{"react":0.2}' gives 98e11c8's 1s0b74m u9u1l2 1vlxyhf)
@@ -63,6 +64,7 @@ if (!LOCAL_ON) { const CL = T.calls && T.calls.CALLS, CS = T.chase && T.chase.CH
     ok(!off.fails.length && off.last === BEFORE_LOCAL, `with the county clubs off (LOCAL), as 1.6 (b9fa00d), and every older pin as before (${off.last}, pinned ${BEFORE_LOCAL}${off.fails.length ? '; ' + off.fails.join('; ') : ''})`); }
   if (RERATE) { const was = await offRun(new URL(import.meta.url), { LOCAL:'{"rerate":false}' });   // 8089294's ratings, the county clubs on: its pin, which was 1.6's
     ok(!was.fails.length && was.last === BEFORE_LOCAL, `with the rerating off (LOCAL rerate), as 8089294 (${was.last}, pinned ${BEFORE_LOCAL}${was.fails.length ? '; ' + was.fails.join('; ') : ''})`); }
+  if (RERATE) await ruckpickProof(new URL(import.meta.url), BEFORE_RUCKPICK, ok);
   ok(now === (RERATE ? BASE : BEFORE_LOCAL), `non-career matches play exactly as they did before the career (seeded fingerprint ${now}, pinned ${RERATE ? BASE : BEFORE_LOCAL})`); }
 
 // the browser save, counted

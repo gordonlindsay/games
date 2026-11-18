@@ -481,7 +481,9 @@ function moveAll(dt) {
         if (t) { seek(p, t.x, t.y, t.s, t.a || 13, dt, t.pursue); continue; }
       }
       if (M.kids && kidsChase(p, inp, dt)) continue;           // Kids: let go of the stick and he chases on his own
-      userMove(p, dt, inp); continue;                          // any deflection places him until the ball is out
+      userMove(p, dt, inp);                                    // any deflection places him until the ball is out
+      if (RUCKPICK.on && M.phase === 'set' && M.set && M.set.kind === 'ruck' && M.set.picker === p) ruckBoxHold(p, ruckBox(M.set.team, M.set.x, M.set.y), dt);   // RUCKPICK: only inside the box behind the ball
+      continue;
     }
     if (M.phase === 'play' && b.state === 'held' && b.carrier === p) { aiCarrier(p, dt); continue; }
     const t = T.get(p);

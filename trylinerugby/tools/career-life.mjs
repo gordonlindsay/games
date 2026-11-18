@@ -3,7 +3,7 @@
 // node tools/career-life.mjs   Exits 1 on any failure.
 // GAME=/path/to/an/older/index.html node tools/career-life.mjs --pins   prints that build's fingerprints, to re-pin BASE below
 process.env.SEED ??= '41';
-const { T, reseed, rndCalls, bot, offRun, LOCAL_CHILD } = await import('./harness.mjs');
+const { T, reseed, rndCalls, bot, offRun, ruckpickProof, LOCAL_CHILD } = await import('./harness.mjs');
 const { readGameSource } = await import('./source.mjs');
 const C = T.career, X = T.teams, D = T.debug, L = T.careerLife, $ = id => document.getElementById(id);
 let passed = 0, failed = 0;
@@ -36,7 +36,8 @@ const near = (a, b, e = 1e-9) => Math.abs(a - b) < e;
 //    Re-pinned for the owner's rerating (LOCAL, 14 Nov 2026: "rerate the lower clubs - farnham shouldnt be as high as they are"): Farnham
 //    and Haslemere, a step down, play these matches, so BASE moves to R_BASE. With LOCAL='{"rerate":false}' this build gives BASE,
 //    8089294's pins, exactly; BEFORE_VIEW and BEFORE_LOCAL hold as before (each checked first, in a child: offRun).
-const R_BASE = { others:'1mhz589 t0jws2 uiv3l7 1ko39dv 83k82g', rest:'zwuioj', restMinis:'1ohszc7' };   // restMinis does not move
+const R_BASE = { others:'1mhz589 ofth74 1w1mpcw 1ko39dv 83k82g', rest:'1evw529', restMinis:'224zoz' };   // re-pinned at the ruck picker (1.10.1, RUCKPICK, src/duels.js): the bot plays your side's rucks in the Quick Match, the championship match and both career matches, so those moved; AI v AI, the demo and the drill did not. With RUCKPICK='{"on":false}' this build gives BEFORE_RUCKPICK, 8fb3bc0's pins, exactly (checked first, in a child: ruckpickProof)
+const BEFORE_RUCKPICK = { others:'1mhz589 t0jws2 uiv3l7 1ko39dv 83k82g', rest:'zwuioj', restMinis:'1ohszc7' };   // 8fb3bc0 (1.10), the rerating's R_BASE (restMinis did not move for it)
 const BASE = { others:'1mhz589 1i0bugf uiv3l7 jhn4ty 83k82g', rest:'18fh7rm', restMinis:'1ohszc7' };   // 8089294, the county clubs at their first ratings
 const BEFORE_VIEW = { others:'1mhz589 1i0bugf uiv3l7 jhn4ty 83k82g', rest:'61kk8v', restMinis:'1ohszc7' };   // 7c864c2, Aldershot in Surrey's draws too
 const BEFORE_LOCAL = { others:'1mhz589 1i0bugf uiv3l7 1ryyg63 83k82g', rest:'1nk9n74', restMinis:'x659pv' };   // 1.6 (b9fa00d), LOCAL off, as 1.6 pinned it (2026-11-14): 1.6 (2026-11-14): the possession calls and the interception rules (src/calls.js) and the kick chase (src/chase.js) together, as the game ships, both acting everywhere on purpose; with CALLS='{"on":false}' CHASE='{"on":false}' this build gives BEFORE_CALLS_CHASE, b4a25d5's pin, exactly; with the chase off alone, WITH_CALLS; with the calls off alone, WITH_CHASE (each checked first, below)
@@ -95,6 +96,7 @@ const LOCAL_ON = !!(T.local && T.local.LOCAL.on), RERATE = LOCAL_ON && !!T.local
     ok(!r.fails.length && r.last === say(BASE), `with the rerating off (LOCAL rerate), as 8089294 (${r.last}, pinned ${say(BASE)}${r.fails.length ? '; ' + r.fails.join('; ') : ''})`); }
   if (LOCAL_ON && T.local.LOCAL.view) { const v = await offRun(new URL(import.meta.url), { LOCAL:'{"view":false,"rerate":false}' });   // 7c864c2 predates the rerating
     ok(!v.fails.length && v.last === say(BEFORE_VIEW), `with Aldershot in Surrey's draws too (LOCAL view off), as 7c864c2 (${v.last}, pinned ${say(BEFORE_VIEW)}${v.fails.length ? '; ' + v.fails.join('; ') : ''})`); }
+  if (RERATE) await ruckpickProof(new URL(import.meta.url), say(BEFORE_RUCKPICK), ok);
   const now = others();
   ok(now === PIN.others, `AI v AI, a Quick Match, a championship match, the demo and a drill play exactly as before the bars (${now}, pinned ${PIN.others})`);
 }
