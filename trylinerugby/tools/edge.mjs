@@ -63,7 +63,7 @@ const SHIPS = { same:'1ru8ljp g0q4ru 1wmj5sn 1kps42k fqhmon h0aw10 1332o5j', eas
    did (rerateProofs). Here the edge's own claims are checked again (EDGE on leaves SAME where EDGE off has it, and moves EASY) and the
    world's own pins are R_BASE, R_ON and R_SHIPS. */
 const R_BASE = { same:'1hzoeux ishkxt w5sz4v a3ytt3 1a6etmy xsjv6d 16fylst', easy:'lwmcb9 h2wwgi 15evn0w' }, R_ON = 'omto7e wjfo1c 1pas51w';
-const R_SHIPS = { same:'1ru8ljp g0q4ru 1d0gqrx 17rjecf zz6yqe 13brdbo acg6nv', easy:'1x1rx2c wjfo1c 1ubzdoa' };   // re-pinned at the ruck picker (1.10.1, RUCKPICK, src/duels.js): the tool's balance match and the arcade matches, where the bot plays your side's rucks, moved; AI v AI, the demo, Two Player and the Easy and Kids matches did not. With RUCKPICK off this build gives R_SHIPS_RUCK, 8fb3bc0's pin, exactly (checked below); BASE, ON and the older pins are builds before it, so they are checked with it off
+const R_SHIPS = { same:'1ru8ljp g0q4ru 1xldzzn 1almi8x zz6yqe 1mu6udb 7ujrf4', easy:'1x1rx2c wjfo1c 1ubzdoa' };   // re-pinned at the ruck picker (1.10.1, RUCKPICK, src/duels.js): the tool's balance match and the arcade matches, where the bot plays your side's rucks, moved; AI v AI, the demo, Two Player and the Easy and Kids matches did not. With RUCKPICK off this build gives R_SHIPS_RUCK, 8fb3bc0's pin, exactly (checked below); BASE, ON and the older pins are builds before it, so they are checked with it off
 const R_SHIPS_RUCK = { same:'1ru8ljp g0q4ru q4pz7f 1kps42k fqhmon tf69zl u8h0sf', easy:'1x1rx2c wjfo1c 1ubzdoa' };   // 8fb3bc0 (1.10)
 const line = (off, on, ships) => [off.same, off.easy, on.easy, ships.same, ships.easy].join(' / ');
 if (process.argv.includes('--pins')) {

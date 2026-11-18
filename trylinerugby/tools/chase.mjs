@@ -287,7 +287,7 @@ if (run && !args.length) {
    step down, play three of these matches, so the pins below move with it (R_). With LOCAL off (1.6) and with the rerating off (8089294)
    this build gives the pins as they were exactly (each in a child: rerateProofs). */
 const R_BASE = 'd0efoc 1fq8pyd 1j02me5 1cc96uv hcpa8a 8r239s 8v7e62 1yjp1u0 1t4l7sj', R_ON = '8iyx7a pemluk 1j02me5 1cc96uv 1phqv xgmaru 8v7e62 1yjp1u0 9ajr81';
-const R_ON_REACT = '1707leb fsophx 1j02me5 1cc96uv j9umex 1c7w2p5 8v7e62 1yjp1u0 1m2h5h5', R_SHIPS = '1iku6ik gn95mi 10nbbke 1c0o0nk 9q1u8p 9duqwv 1q2xuhl bkswl5 afl9p6';
+const R_ON_REACT = '1707leb fsophx 1j02me5 1cc96uv j9umex 1c7w2p5 8v7e62 1yjp1u0 1m2h5h5', R_SHIPS = '1iku6ik gn95mi vwl1na l6row4 5x6j0o m81z02 7mfpzk 16glp12 1sxl399';
 // R_SHIPS re-pinned at the ruck picker (1.10.1, RUCKPICK, src/duels.js): the tool's match, Easy, Normal and Hard as played, Kids and Two Player, where
 // your side's rucks have a picker, moved, and the count of draws with them; AI v AI and the demo did not. With RUCKPICK off this build gives
 // R_SHIPS_RUCK, 8fb3bc0's pin, exactly (checked below); R_BASE, R_ON, R_ON_REACT and the older pins are builds before it, so they are checked with it off
@@ -447,8 +447,9 @@ begin('3 the chasers');
   // kicker about a third of the time or more, who did not chase. This closed README.md's open item, your man after your own chip
   if (CLS) {
     const { PROFILES, casualStep } = await import('./bot.mjs'), P = CHASER(PROFILES.casual);
+    const RPo = T.contact.RUCKPICK, RPo0 = !!(RPo && RPo.on);   // off is wt/chase's world, before the ruck picker (1.10.1) too, as in the children (offRun): with it on, seed 3 has the ring on a man 0.49m in front of the kicker, inside this check's 0.5m and offside
     const own = on => {
-      CLS.on = on; const rows = []; let matches = 0;
+      CLS.on = on; if (RPo && !on) RPo.on = false; const rows = []; let matches = 0;
       for (let seed = 1; rows.length < 100 && seed < 200; seed++) {
         matches++; reseed(seed);
         const i = seed % 30, a = i % 6, b = (a + 1 + (i % 5)) % 6;
@@ -465,7 +466,7 @@ begin('3 the chasers');
         }
         for (const inp of T.inputs) { inp.jx = inp.jy = 0; inp.aPressed = inp.bPressed = inp.cPressed = false; inp.aDown = inp.bDown = inp.cDown = false; inp.flick = 0; }
       }
-      CLS.on = CLS0;
+      CLS.on = CLS0; if (RPo) RPo.on = RPo0;
       return { rows, matches };
     };
     const on = own(true), off = own(false), front = off.rows.filter(r => r.front).length;

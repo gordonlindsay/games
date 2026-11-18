@@ -481,8 +481,10 @@ function moveAll(dt) {
         if (t) { seek(p, t.x, t.y, t.s, t.a || 13, dt, t.pursue); continue; }
       }
       if (M.kids && kidsChase(p, inp, dt)) continue;           // Kids: let go of the stick and he chases on his own
+      const B = RUCKPICK.on && M.phase === 'set' && M.set && M.set.kind === 'ruck' && M.set.picker === p ? ruckBox(M.set.team, M.set.x, M.set.y) : null;
+      if (B) { const q = ruckBoxNear(p, B); if (q.out > RUCKPICK.in) { seek(p, q.x, q.y, maxSpeed(p), RUCKPICK.acc, dt, true); continue; } }   // RUCKPICK: out of the box (he started wide or ahead, or was pushed), he runs into it at full pace whatever the stick says
       userMove(p, dt, inp);                                    // any deflection places him until the ball is out
-      if (RUCKPICK.on && M.phase === 'set' && M.set && M.set.kind === 'ruck' && M.set.picker === p) ruckBoxHold(p, ruckBox(M.set.team, M.set.x, M.set.y), dt);   // RUCKPICK: only inside the box behind the ball
+      if (B) ruckBoxHold(p, B, dt);                            // RUCKPICK: only inside the box behind the ball
       continue;
     }
     if (M.phase === 'play' && b.state === 'held' && b.carrier === p) { aiCarrier(p, dt); continue; }

@@ -735,7 +735,7 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   // base): Quick Match on Normal at 2, 4 and 6 minutes, where the bot plays your side's rucks, moved; Easy, Hard, Two Player, AI v AI and
   // the demo did not. With RUCKPICK='{"on":false}' this build gives BEFORE_RUCKPICK, 8fb3bc0's PIN, exactly (in a child: ruckpickProof)
   const BEFORE_RUCKPICK = '1ckfie8 17jlh1u 7dpem6 1ojvcyi 1mx45p0 o24dg5 19781ts 1afo373';
-  const PIN = RERATE ? '1ckfie8 tpw9rf 7dpem6 1dgzt90 1ylbmb6 o24dg5 19781ts 1afo373' : 'ytai0c 7gbn71 16q2gdq kycu0e 1owh0p7 1db7d9g 19781ts 1afo373';
+  const PIN = RERATE ? '1ckfie8 1yhoori 7dpem6 p81kje 1bmp66s o24dg5 19781ts 1afo373' : 'ytai0c 7gbn71 16q2gdq kycu0e 1owh0p7 1db7d9g 19781ts 1afo373';
   const BEFORE_LOCAL = 'ytai0c 7gbn71 16q2gdq kycu0e 1owh0p7 1db7d9g 19781ts 1afo373';
   const WITH_CALLS = 'ytai0c 1vfa9il 17vh7h5 1h583yb 1owh0p7 1db7d9g 19781ts 1afo373';
   const WITH_CHASE = '7wl1n0 kq1d2 1c0yntb 1cco652 1klviba 1db7d9g fs1jc3 1j6lmbf';

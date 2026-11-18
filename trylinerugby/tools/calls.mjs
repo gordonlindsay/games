@@ -150,7 +150,7 @@ if (!run) { /* imported */ }
    step down, play three of these matches, so the pins below move with it (R_). With LOCAL off (1.6) and with the rerating off (8089294)
    this build gives the pins as they were exactly (each in a child: rerateProofs). */
 const R_BASE = '7v2oz 1up177z rpz32y jn1hak 1nn3ygy 1645i86 1rrksv3 1v5mrfn tdeptr', R_ON = 'tm442c 1jf7qng gy0tge e2nt7f nplown 1a1o3mj 16vj9il 16e7lhf a4gdxz';
-const R_SHIPS = 'j2z3up 1jf7qng scgzmf 1cpxism 1mf4t4m 89ponc v8od0d 166g2st 1tpju3g';   // re-pinned at the ruck picker (1.10.1, RUCKPICK, src/duels.js): the tool's match, Easy, Normal and Hard as played, Kids and Two Player, where your side's rucks have a picker, moved, and the count of draws with them; AI v AI and the demo did not. With RUCKPICK off this build gives R_SHIPS_RUCK, 8fb3bc0's pin, exactly (checked below); R_BASE, R_ON and the older pins are builds before it, so they are checked with it off
+const R_SHIPS = 'j2z3up 1jf7qng bbrjl 10xxfsw v931o5 1r1pazu mntks1 1o0wkjy 1aj61xc';   // re-pinned at the ruck picker (1.10.1, RUCKPICK, src/duels.js): the tool's match, Easy, Normal and Hard as played, Kids and Two Player, where your side's rucks have a picker, moved, and the count of draws with them; AI v AI and the demo did not. With RUCKPICK off this build gives R_SHIPS_RUCK, 8fb3bc0's pin, exactly (checked below); R_BASE, R_ON and the older pins are builds before it, so they are checked with it off
 const R_SHIPS_RUCK = 'j2z3up 1jf7qng gy0tge e2nt7f 1ad2kpp 1a1o3mj 16vj9il 16e7lhf 1s0250p';   // 8fb3bc0 (1.10)
 begin('0 CALLS off is b4a25d5');
 {
@@ -339,8 +339,9 @@ begin('3 On Fire after its moment');
   ok(m.fireQ && m.fireQ.at === m.stepN + Math.round(1.7/STEP), 'a try: after the Try banner\'s 1.7s');
   // a real try that lights it: the Try banner, the conversion's close-up, the kick-off; On Fire shows once play is on again, and
   // stands its 1.3s with nothing clearing it (it used to show 0.22s before the conversion's close-up wiped it)
-  const tryFire = on => {
-    if (!on) setC({ on:false });
+  const tryFire = on => {   // off is b4a25d5's world, before the ruck picker (1.10.1) too, as in the children (offRun): a later try of the bot's own, 87s on, lights a second On Fire with it on
+    const RPf = T.contact.RUCKPICK, RPf0 = !!(RPf && RPf.on);
+    if (!on) { setC({ on:false }); if (RPf) RPf.on = false; }
     settings.tut = D.TUT_IDS.slice(); settings.tips = D.COACH_IDS.slice();
     const m = scene({ arcade:true }); m.fire[0].heat = T.arcade.ARCADE.fire.need - 2;
     const el = document.getElementById('banner'); let html = '', blank = 0;
@@ -357,7 +358,7 @@ begin('3 On Fire after its moment');
       r.cleared = r.cleared || blank - r.shown.blank !== said.length - r.shown.said;   // say() blanks the banner before writing it: any other blank is clearBanner
       r.after = said.slice(r.shown.said); r.roar = roars();
     }
-    delete el.innerHTML; if (!on) resetC();
+    delete el.innerHTML; if (!on) { resetC(); if (RPf) RPf.on = RPf0; }
     return r;
   };
   let F = tryFire(true);
