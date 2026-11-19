@@ -287,7 +287,7 @@ if (run && !args.length) {
    step down, play three of these matches, so the pins below move with it (R_). With LOCAL off (1.6) and with the rerating off (8089294)
    this build gives the pins as they were exactly (each in a child: rerateProofs). */
 const R_BASE = 'd0efoc 1fq8pyd 1j02me5 1cc96uv hcpa8a 8r239s 8v7e62 1yjp1u0 1t4l7sj', R_ON = '8iyx7a pemluk 1j02me5 1cc96uv 1phqv xgmaru 8v7e62 1yjp1u0 9ajr81';
-const R_ON_REACT = '1707leb fsophx 1j02me5 1cc96uv j9umex 1c7w2p5 8v7e62 1yjp1u0 1m2h5h5', R_SHIPS = '1iku6ik gn95mi vwl1na l6row4 5x6j0o m81z02 7mfpzk 16glp12 1sxl399';
+const R_ON_REACT = '1707leb fsophx 1j02me5 1cc96uv j9umex 1c7w2p5 8v7e62 1yjp1u0 1m2h5h5', R_SHIPS = '1iku6ik gn95mi 1gps0mo 13sq2o1 oerue1 zkggd4 zesjzb bhlgyv ef122i';
 // R_SHIPS re-pinned at the ruck picker (1.10.1, RUCKPICK, src/duels.js): the tool's match, Easy, Normal and Hard as played, Kids and Two Player, where
 // your side's rucks have a picker, moved, and the count of draws with them; AI v AI and the demo did not. With RUCKPICK off this build gives
 // R_SHIPS_RUCK, 8fb3bc0's pin, exactly (checked below); R_BASE, R_ON, R_ON_REACT and the older pins are builds before it, so they are checked with it off

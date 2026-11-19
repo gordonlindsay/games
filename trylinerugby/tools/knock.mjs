@@ -164,7 +164,7 @@ if (run && !args.length) {
    play several of these matches, so BASE, ON and SHIPS move to R_BASE, R_ON and R_SHIPS. With LOCAL off (1.6) and with the rerating off
    (8089294) this build gives BASE, ON and SHIPS exactly, and LOCAL off the whole chain as before (each in a child: rerateProofs). */
 const R_BASE = 'gfkiiv af2q5q rj1jts xc3q2t 1sgvx41 3whr8x 1en25jn 1qes7af 1xat9ht', R_ON = '3mv681 e4k4jm tf5qza 1oy4gdg ksahst ot75uq 1hd7vrl 1xu8bt5 1mw31sj';
-const R_SHIPS = '1pqg3nt 1mxxcjd reoxwv 5wqllk 19qlxn6 1g2i8u5 cjs0ze 1hkqs1c 17qgrgc';   // re-pinned at the ruck picker (1.10.1, RUCKPICK, src/duels.js): the tool's match, Easy, Normal and Hard as played, Kids and Two Player, where your side's rucks have a picker, moved, and the count of draws with them; AI v AI and the demo did not. With RUCKPICK off this build gives R_SHIPS_RUCK, 8fb3bc0's pin, exactly (checked below); R_BASE, R_ON and the older pins are builds before it, so they are checked with it off
+const R_SHIPS = '1pqg3nt 1mxxcjd 1d030dx abmcyk 1azvm4c tg84jg 10nx3ri 1dhzgt2 s8v6g9';   // re-pinned at the ruck picker (1.10.1, RUCKPICK, src/duels.js): the tool's match, Easy, Normal and Hard as played, Kids and Two Player, where your side's rucks have a picker, moved, and the count of draws with them; AI v AI and the demo did not. With RUCKPICK off this build gives R_SHIPS_RUCK, 8fb3bc0's pin, exactly (checked below); R_BASE, R_ON and the older pins are builds before it, so they are checked with it off
 const R_SHIPS_RUCK = '1pqg3nt 1mxxcjd otz3w8 7arb53 2b8eir 1r6tbn6 pohjwb j1esqw txdx7p';   // 8fb3bc0 (1.10)
 begin('0 KNOCK off is 20cbcaf');
 if (LOCAL_ON) {
@@ -288,14 +288,15 @@ begin('3 one draw a catch');
   // a full match: up to the first catch whose outcome differs, every catch sees the same draw at the same point in the stream
   const trace = (seed = 77) => { const out = []; globalThis.__knockSpy = (w, q, v) => { if (w === 'catch') out.push([rndCalls(), v.r, v.r < v.pk]); }; play(seed, X.NATIONS[0], X.NATIONS[3], { diff:1, duels:'live', arcade:true }); delete globalThis.__knockSpy; return out; };
   const upTo = (a, b) => { const first = a.findIndex((v, i) => !b[i] || v[2] !== b[i][2]); return { first, same:first > 0 && a.slice(0, first + 1).every((v, i) => v[0] - a[0][0] === b[i][0] - b[0][0] && v[1] === b[i][1]) }; };
-  // seed 77's match as 8fb3bc0 played it (RUCKPICK off). As the game ships, the ruck picker moves the match and no catch in seed 77's
-  // (nor 78's) falls between the two chances, so the shipping game is checked the same way on seed 79, the first after 77 with one
+  // seed 77's match as 8fb3bc0 played it (RUCKPICK off), then as the game ships (the ruck picker on, which moves the match). 1.10.1's
+  // first cut had no catch in seed 77's between the two chances and checked seed 79; with the ball held at the base for the picker, 77
+  // has one again (and 79, like 82 in 8fb3bc0's own game, now differs before its first such catch, so it is no fixed match to check)
   const RP = T.contact.RUCKPICK, RP0 = !!(RP && RP.on);
   if (RP) RP.on = false; const a = trace(); setK({ on:false }); const b = trace(); reset(); if (RP) RP.on = RP0;
   const u = upTo(a, b);
   ok(u.first > 0 && u.same, `a played match: its first ${u.first + 1} catches draw the same numbers at the same points, KNOCK on or off, up to the first one it holds that it dropped before`);
-  if (RP0) { const a2 = trace(79); setK({ on:false }); const b2 = trace(79); reset(); const u2 = upTo(a2, b2);
-    ok(u2.first > 0 && u2.same, `and as the game ships (the ruck picker on), seed 79's match: its first ${u2.first + 1} catches draw the same numbers at the same points, KNOCK on or off, up to the first one it holds that it dropped before`); }
+  if (RP0) { const a2 = trace(); setK({ on:false }); const b2 = trace(); reset(); const u2 = upTo(a2, b2);
+    ok(u2.first > 0 && u2.same, `and as the game ships (the ruck picker on), the same match: its first ${u2.first + 1} catches draw the same numbers at the same points, KNOCK on or off, up to the first one it holds that it dropped before`); }
 }
 done('3 one draw a catch');
 

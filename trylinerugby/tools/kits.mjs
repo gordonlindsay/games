@@ -78,7 +78,9 @@ function offPrint() {
 const BEFORE_KITS = 'jaitaa gewn4c 13w088h max11t e1vtwv 1dkitqy 1s8u1wp 18qzf06 1wky9rq 1ngdrhm 1i3gebc';   // 02b9700 (1.7), from its own index.html
 if (process.env.KITS_CHILD) { console.log(offPrint()); process.exit(0); }
 {
-  const out = spawnSync(process.execPath, [fileURLToPath(import.meta.url)], { env:{ ...process.env, KITS:'{"on":false}', KITS_CHILD:'1' }, encoding:'utf8', maxBuffer:64*1024*1024 });
+  // RUCKPICK off too (1.10.1, src/duels.js): 1.7 had no ruck picker, and once the ball waits at the base for him the bot's own rucks in the
+  // lineout and goal-kick matches play differently. With it off this build still draws exactly as 02b9700
+  const out = spawnSync(process.execPath, [fileURLToPath(import.meta.url)], { env:{ ...process.env, KITS:'{"on":false}', RUCKPICK:'{"on":false}', KITS_CHILD:'1' }, encoding:'utf8', maxBuffer:64*1024*1024 });
   const last = (out.stdout || '').trim().split('\n').pop() || '', fails = ((out.stdout || '') + (out.stderr || '')).split('\n').filter(l => /^FAIL|Error/.test(l));
   ok(!fails.length && last === BEFORE_KITS, `with KITS off the build draws as 1.7 (02b9700): every designed club's icon and a made side's, the canvas call by call on Top and Mid with the close-ups, a lineout, a scrum and a goal kick, the change kits and the demo (${last}${fails.length ? ' ' + fails.join(' ') : ''}, pinned ${BEFORE_KITS})`);
 }

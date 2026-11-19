@@ -271,6 +271,7 @@ function tackleChecks(c) {
 }
 function collide() {                                       // standing men push apart; a man on the ground, or one bound in a tackle, is stepped round; team-mates stop jostling
   const P = M.players, R = 1.25, RD = CONTACT.downR;
+  const pk = RUCKPICK.on && M.phase === 'set' && M.set && M.set.kind === 'ruck' ? M.set.picker : null;   // RUCKPICK: the ruck's picker runs through his own standing team-mates to its base (they stood in his way, and he got there late)
   for (let i = 0; i < P.length; i++) {
     const a = P[i];
     for (let j = i+1; j < P.length; j++) {
@@ -278,6 +279,7 @@ function collide() {                                       // standing men push 
       if (a.bind && a.bind === c.bind) continue;             // the men in one bind hold each other: bindMove owns them
       const ad = a.down > 0 || !!a.bind, cd = c.down > 0 || !!c.bind;   // a bound man stays put like a man on the ground, and everyone else steps round him
       if (ad && cd) continue;
+      if (pk && (a === pk || c === pk) && a.team === c.team && !ad && !cd) continue;
       const dx = c.x-a.x, dy = c.y-a.y, d2 = dx*dx + dy*dy, r = (ad || cd) ? RD : R;
       if (d2 >= r*r) continue;
       const d = Math.sqrt(d2), o = Math.min(r - d, (ad || cd) ? 0.2 : 0.4), nx = d > 1e-3 ? dx/d : 1, ny = d > 1e-3 ? dy/d : 0;   // eased out by at most 0.2m a step round a man on the ground or bound (one getting up inside a crowd is not shoved), 0.4m between standing men so they never sink into each other; an exact overlap is parted along the touchline axis rather than left

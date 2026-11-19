@@ -28,15 +28,20 @@ const CONTACT = { bind:0.25, side:1.10, contact:[0.58,0.42,0.42], dive:[0.66,0.5
 const RUCK = { t:{ quick:0.7, normal:1.0, slow:1.5 }, quickLead:0.3, attHead:0.35, gate:3.5, retire:0.6, flatBase:0.11, pen:0.045, wf:{ r:3, t:0.7, mul:0.5 } };
 /* The ruck picker (1.10.1): a human side's ruck moves the ring to the man who will pick the ball up, and the stick places him while the
    ruck is down. He is the nearest free man at or behind the ruck line who can reach its base (the box below, no deeper than `deep` m
-   behind the line) at full pace (`acc`, braking first from any pace away from it) with `spare` s to go before the ball comes out; the
-   nearest of all only when none can. The box is behind the ball: from `ahead` m behind the ruck line back, within `wide` m either side
-   of the mark, and `touch` m in from either touchline. Inside it the stick moves him and he slides along its edge; outside it (by more
-   than `in` m) he runs into it at full pace whatever the stick says. releaseTo puts him back on its edge if a push moved him out by
-   `put` m or less, a collision's size; further out, he is not pinned, and the nearest free man to the mark at or behind the ruck line
-   (any man only if none is) takes it where he stands, so the ball never jumps a man across the pitch. A thumb still pushing forward
-   from the run used to drive him 4 to 11m through the gap the defence leaves, and the ball appeared on him there. CPU sides never
-   have a picker. RUCKPICK='{"on":false}' is 8fb3bc0 (1.10) draw for draw. */
-const RUCKPICK = { on:true, ahead:0.5, wide:5, touch:0.5, deep:4, in:0.02, acc:20, spare:0.1, put:0.35 };
+   behind the line) at full pace (`acc`, braking first from any pace away from it, on the route he runs) with `spare` s to go before
+   the ball comes out; failing that, the nearest behind it who can with the ball held for him (`wait`); failing that, whoever of all
+   gets there soonest. The box is behind the ball: from `ahead` m behind the ruck line back, within `wide` m either side of the mark,
+   and `touch` m in from either touchline. Inside it the stick moves him and he slides along its edge; outside it (by more than `in` m)
+   he runs into it at full pace whatever the stick says, held or let go, aimed `inset` m inside its edge, through his own standing
+   team-mates, and round the men on the ground (out to `round` m aside, no more than `front` m in front) when he starts in front of
+   the ball beside the ruck. When the ruck's time is up and he is still outside, the ball waits at the base for him (released on the
+   step he gets in) for `wait` s at most, or `waitLast` s when nobody else is at or behind the ruck line; the defence holds its ruck
+   line and the tackler stays down meanwhile. So the man you control is the man who takes it. releaseTo puts him back on the box's edge
+   if a push moved him out by `put` m or less, a collision's size; further out, he is not pinned, and the nearest free man to the mark
+   at or behind the ruck line (any man only if none is) takes it where he stands, so the ball never jumps a man across the pitch. A
+   thumb still pushing forward from the run used to drive him 4 to 11m through the gap the defence leaves, and the ball appeared on
+   him there. CPU sides never have a picker or a wait. RUCKPICK='{"on":false}' is 8fb3bc0 (1.10) draw for draw. */
+const RUCKPICK = { on:true, ahead:0.5, wide:5, touch:0.5, deep:4, in:0.02, acc:20, spare:0.1, put:0.35, wait:1.0, waitLast:3.0, round:2.4, front:2.0, inset:0.15 };
 const SPRINT = { mul:[1.25,1.25,1.20], mulBall:[1.06,1.06,1.05], secs:2.0, ballDrain:1.5, refill:[7,10,10], floor:0.2, fade:0.3, pick:4, cpu:{ chase:[0.1,0.12,0.2], chaseLast:[0,0,0], carry:[0,0.05,0.3], carryLast:[0,0,0], lane:15, min:2.5, max:12, space:6, keep:2.5, think:0.25 } };
 const INSTANT = [0.85, 0.70, 0.55];
 // Key Pass: how often the defender drifts onto the runner (Dummy is right) and, when he doesn't, how often he fakes a drift first

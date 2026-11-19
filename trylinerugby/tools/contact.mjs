@@ -366,8 +366,11 @@ begin('ruck control');
   // repro found: the ball out to him 4 to 7m past the line, with no pass). Now the stick moves him only inside the box behind the ball
   const RP = C.RUCKPICK, RP0 = snap(RP);
   ok(RP.on === true && RP.ahead === 0.5 && RP.wide === 5 && RP.touch === 0.5 && RP.deep === 4 && RP.put === 0.35, `RUCKPICK ships on, ${RP.ahead}m back from the ruck line, ${RP.wide}m either side of the mark and ${RP.touch}m in from touch, the base ${RP.deep}m deep, a push undone up to ${RP.put}m`);
+  ok(RP.wait === 1 && RP.waitLast === 3 && RP.round === 2.4 && RP.front === 2 && RP.inset === 0.15, `and the ball held for him at most ${RP.wait}s (${RP.waitLast}s when nobody else is behind the ball), round the ruck ${RP.round}m aside, aimed ${RP.inset}m inside the box`);
   const STRIDE = 0.25;   // the most a man moves in one step, a normal stride (maxSpeed*STEP, about 0.15m) and a little: a release that moves the carrier further is a jump
-  const held = (wide, len) => {   // { past, aside, lastAside, jump, maxPast, maxAside, passes, carrier } for the stick held forward through the ruck, or null when no try stuck
+  // { past, aside, lastAside, timeAside, jump, maxPast, maxAside, passes, carrier, ring, waited } for the stick held at `stick` (forward unless
+  // said) through the ruck, or null when no try stuck. timeAside: how far aside he was as the ruck's own time ran out; ring: the ring on him after
+  const held = (wide, len, stick = [1, 0]) => {
     for (let i = 0; i < 12; i++) {
       fresh(1); noJolt(); RUCK.pen = 0; M().diff.turnover = -1;
       const kk = bind(FRONT, 'ai', 'wrap'), m2 = kk.own[1]; park(kk, m2);
@@ -375,13 +378,13 @@ begin('ruck control');
       if (!toRuck() || M().set.picker !== m2) continue;
       const s = M().set, d2 = dirOf(s.team); s.t = len;
       const tg = C.computeTargets(); for (const q of M().players) if (q.team !== s.team && q.down <= 0 && !q.bind) { const t = tg.get(q); if (t) { q.x = t.x; q.y = t.y; q.vx = q.vy = 0; } }   // the defence on its ruck line
-      const p0 = M().stats.passes || 0; let maxPast = -99, maxAside = 0, pre = null;
-      run(() => M().phase !== 'set', 120, () => { inp.jx = 1; inp.jy = 0; if (M().phase === 'set') { maxPast = Math.max(maxPast, (m2.x - s.x)*d2); maxAside = Math.max(maxAside, Math.abs(m2.y - s.y)); pre = M().players.map(q => ({ x:q.x, y:q.y })); } });
+      const p0 = M().stats.passes || 0; let maxPast = -99, maxAside = 0, pre = null, timeAside = null;
+      run(() => M().phase !== 'set', 400, () => { inp.jx = stick[0]; inp.jy = stick[1]; if (M().phase === 'set') { maxPast = Math.max(maxPast, (m2.x - s.x)*d2); maxAside = Math.max(maxAside, Math.abs(m2.y - s.y)); pre = M().players.map(q => ({ x:q.x, y:q.y })); if (timeAside == null && s.t <= 0) timeAside = Math.abs(m2.y - s.y); } });
       inp.jx = inp.jy = 0;
       const b = M().ball, c = b.state === 'held' ? b.carrier : null;
       if (!c || c.team !== s.team) continue;   // the 3% turnover floor: kept only, as the loops above
       const was = pre[M().players.indexOf(c)];
-      return { carrier:c === m2, past:(c.x - s.x)*d2, aside:Math.abs(c.y - s.y), lastAside:Math.abs(pre[M().players.indexOf(m2)].y - s.y), jump:dist(c, was), maxPast, maxAside, passes:(M().stats.passes || 0) - p0 };
+      return { carrier:c === m2, past:(c.x - s.x)*d2, aside:Math.abs(c.y - s.y), lastAside:Math.abs(pre[M().players.indexOf(m2)].y - s.y), timeAside, jump:dist(c, was), maxPast, maxAside, passes:(M().stats.passes || 0) - p0, ring:M().ctrl === m2, waited:s.waited || 0 };
     }
     return null;
   };
@@ -395,10 +398,61 @@ begin('ruck control');
   const h6 = held(6.5, RUCK.t.normal);
   ok(h6 && h6.carrier && h6.lastAside <= RP.wide + 1e-9 && h6.past <= -RP.ahead + 1e-9 && h6.aside <= RP.wide + 1e-9 && h6.passes === 0, `a picker standing 6.5m wide, stick forward: he slides in to the box before the ball comes out (${h6 ? h6.lastAside.toFixed(2) : '-'}m aside the step before) and takes it ${h6 ? h6.aside.toFixed(2) : '-'}m aside, ${h6 ? h6.past.toFixed(2) : '-'}m past the line`);
   ok(h6 && h6.jump <= STRIDE, `and the release moves him a stride at most (${h6 ? h6.jump.toFixed(2) : '-'}m)`);
-  // too wide to get there on a quick ruck: he is not pinned, and the nearest man to the mark (here still him) takes it where he stands
+  // too wide to get there on a quick ruck: the ball waits at the base for him (RUCKPICK.wait at most), and he takes it in the box, the ring
+  // still on him. 1.10.1's second cut gave it to whoever stood nearest the mark behind the ball when time ran out, so the ring jumped
+  // from the man you were steering to another, 5 to 17m away, about 1.35 times a match with the stick let go
   const h12 = held(12, RUCK.t.quick);
-  ok(h12 && h12.lastAside > RP.wide + RP.put && h12.past <= 1e-9 && h12.passes === 0, `a picker 12m wide on a quick ruck, stick forward: still ${h12 ? h12.lastAside.toFixed(2) : '-'}m aside when it comes out, and the ball goes to the nearest man to the mark behind the ball, ${h12 ? h12.past.toFixed(2) : '-'}m past the line`);
-  ok(h12 && h12.jump <= STRIDE, `with no jump to the box's edge (${h12 ? h12.jump.toFixed(2) : '-'}m; ${h12 ? (h12.carrier ? 'the picker' : 'another man') : '-'} has it)`);
+  ok(h12 && h12.timeAside > RP.wide + RP.put && h12.waited > 0 && h12.waited <= RP.wait + 1e-9, `a picker 12m wide on a quick ruck, stick forward: still ${h12 ? h12.timeAside.toFixed(2) : '-'}m aside when its ${RUCK.t.quick}s are up, so the ball waits ${h12 ? h12.waited.toFixed(2) : '-'}s for him (at most ${RP.wait}s)`);
+  ok(h12 && h12.carrier && h12.ring && h12.aside <= RP.wide + 1e-9 && h12.past <= -RP.ahead + 1e-9 && h12.passes === 0, `and he takes it in the box, ${h12 ? h12.aside.toFixed(2) : '-'}m aside and ${h12 ? h12.past.toFixed(2) : '-'}m past the line, the ring still on him`);
+  ok(h12 && h12.jump <= STRIDE, `with no jump to the box's edge (${h12 ? h12.jump.toFixed(2) : '-'}m)`);
+  // the same with the stick let go (the default way to play): he runs in on his own, and the ring stays on him
+  const h10 = held(10, RUCK.t.quick, [0, 0]);
+  ok(h10 && h10.timeAside > RP.wide + RP.put && h10.waited > 0 && h10.waited <= 0.5, `a picker 10m wide on a ${RUCK.t.quick}s ruck, stick let go: ${h10 ? h10.timeAside.toFixed(2) : '-'}m aside when its time is up, and the ball waits a short ${h10 ? h10.waited.toFixed(2) : '-'}s for him`);
+  ok(h10 && h10.carrier && h10.ring && h10.aside <= RP.wide + 1e-9 && h10.past <= -RP.ahead + 1e-9 && h10.jump <= STRIDE && h10.passes === 0, `and the ring stays on him: he takes it in the box (${h10 ? h10.aside.toFixed(2) : '-'}m aside, ${h10 ? h10.past.toFixed(2) : '-'}m past the line), a stride from his last step (${h10 ? h10.jump.toFixed(2) : '-'}m)`);
+  // in front of the ball beside the ruck, stick let go: he goes round the men on the ground (the tackled man and the tackler) into the box.
+  // Running straight back, the tackled man stopped him 1.3 to 1.4m in front of the ruck line, out of the box, until the ball came out
+  // to another man
+  const round = (() => {
+    for (let i = 0; i < 12; i++) {
+      fresh(1); noJolt(); RUCK.pen = 0; M().diff.turnover = -1;
+      const kk = bind(FRONT, 'ai', 'wrap'), m2 = kk.own[1]; park(kk, m2);
+      if (!toRuck()) continue;
+      const s = M().set, d2 = dirOf(s.team);
+      m2.x = s.x + d2*1.4; m2.y = s.y + 0.3; m2.vx = m2.vy = 0; s.picker = m2; T.sides.setCtrl(s.team, m2); s.t = RUCK.t.normal;
+      let pre = null;
+      run(() => M().phase !== 'set', 400, () => { inp.jx = inp.jy = 0; if (M().phase === 'set') pre = { x:m2.x, y:m2.y }; });
+      const c = M().ball.state === 'held' ? M().ball.carrier : null;
+      if (!c || c.team !== s.team) continue;
+      return { carrier:c === m2, ring:M().ctrl === m2, past:(c.x - s.x)*d2, aside:Math.abs(c.y - s.y), jump:pre ? dist(c, pre) : 99, waited:s.waited || 0 };
+    }
+    return null;
+  })();
+  ok(round && round.carrier && round.ring && round.past <= -RP.ahead + 1e-9 && round.aside <= RP.wide + 1e-9 && round.jump <= STRIDE && round.waited <= RP.wait - 0.2, `a picker 1.4m in front of the ruck line beside it, stick let go: he goes round it and takes the ball in the box (${round ? round.past.toFixed(2) : '-'}m past the line, ${round ? round.aside.toFixed(2) : '-'}m aside, after a ${round ? round.waited.toFixed(2) : '-'}s wait), the ring still on him`);
+  // past the wait: a picker too far out for it, with a team-mate behind the ball, and the ball goes to that man where he stands, with no
+  // jump. With nobody else behind the ball, it waits for the picker up to RUCKPICK.waitLast, so the ball never comes out past the line
+  const far = mates => {
+    for (let i = 0; i < 12; i++) {
+      fresh(1); noJolt(); RUCK.pen = 0; M().diff.turnover = -1;
+      const kk = bind(FRONT, 'ai', 'wrap'), m2 = kk.own[1]; park(kk, m2);
+      if (!toRuck()) continue;
+      const s = M().set, d2 = dirOf(s.team), side = s.y < 35 ? 1 : -1, rest = kk.own.filter(p => p !== kk.c && p !== m2 && p.down <= 0 && !p.bind);
+      m2.x = s.x - d2*1.0; m2.y = s.y + side*26; m2.vx = m2.vy = 0; s.picker = m2; T.sides.setCtrl(s.team, m2); s.t = RUCK.t.quick;
+      rest.forEach((p, k) => { p.vx = p.vy = 0; p.x = s.x + d2*(6 + k); p.y = s.y - side*(8 + k); });   // everyone else in front of the ball, far from it
+      if (mates) { rest[0].x = s.x - d2*3; rest[0].y = s.y - side*7; }   // one behind it, outside the box
+      const home = rest.map(p => ({ x:p.x, y:p.y }));   // held where they were put (left alone, the men in front run back onside within the wait)
+      let pre = null;
+      const up = { x:s.x + d2*5, y:s.y - side*12 };   // and the tackled man, once he is up, in front of the ball too (he gets up at its base, nearest the mark, and would take it)
+      run(() => M().phase !== 'set', 600, () => { inp.jx = inp.jy = 0; rest.forEach((p, k) => { p.x = home[k].x; p.y = home[k].y; p.vx = p.vy = 0; }); if (kk.c.down <= 0 && !kk.c.bind) { kk.c.x = up.x; kk.c.y = up.y; kk.c.vx = kk.c.vy = 0; } if (M().phase === 'set') pre = M().players.map(q => ({ x:q.x, y:q.y })); });
+      const c = M().ball.state === 'held' ? M().ball.carrier : null;
+      if (!c || c.team !== s.team) continue;
+      return { m2, mate:rest[0], c, past:(c.x - s.x)*d2, aside:Math.abs(c.y - s.y), jump:dist(c, pre[M().players.indexOf(c)]), waited:s.waited || 0 };
+    }
+    return null;
+  };
+  const f1 = far(true);
+  ok(f1 && near(f1.waited, RP.wait, STEP + 1e-9) && f1.c === f1.mate && f1.past <= 1e-9 && f1.jump <= STRIDE, `a picker 26m wide, a team-mate behind the ball: the ball waits ${f1 ? f1.waited.toFixed(2) : '-'}s, then goes to that man where he stands (${f1 ? f1.past.toFixed(2) : '-'}m past the line, moved ${f1 ? f1.jump.toFixed(2) : '-'}m)`);
+  const f0 = far(false);
+  ok(f0 && f0.waited > RP.wait && f0.waited <= RP.waitLast && f0.c === f0.m2 && f0.past <= -RP.ahead + 1e-9 && f0.aside <= RP.wide + 1e-9 && f0.jump <= STRIDE, `and with nobody else behind it, it waits ${f0 ? f0.waited.toFixed(2) : '-'}s (at most ${RP.waitLast}s) and he takes it in the box, ${f0 ? f0.past.toFixed(2) : '-'}m past the line: 1.10.1's second cut gave it to the nearest man wherever he stood, once 1.05m past the line`);
   // by touch: the box stops `touch` m in from the touchline, so the stick pushed to touch never takes the ball out of play (it used to
   // reach y = -3, and the other side had the lineout)
   const byTouch = () => {
@@ -445,12 +499,13 @@ begin('ruck control');
     for (const p of rest) { p.x = s.x + d2*(3 + rest.indexOf(p)); p.y = s.y + 2; }
     const o = { ...s }; delete o.picker; C.startSet(o);
     const nearAll = rest.reduce((a, p) => (dist(p, mk) < dist(a, mk) ? p : a));
-    ok(o.picker === nearAll, 'with nobody behind the ball, the nearest of all');
-    // behind the ball but too far back to reach its base before it comes out: passed over for the nearest of all, whom the box pulls
+    ok(o.picker === nearAll, 'with nobody behind the ball, whoever of all gets to its base soonest (here the nearest of all too)');
+    // behind the ball but too far back to reach its base before it comes out, even with the ball held for him: passed over for whoever of
+    // all gets there soonest (here the nearest of all), whom the box pulls
     // back (1.10.1's first cut took the man 30m back, and the ball came out to him there with no pass)
     rest.forEach((p, i) => { p.vx = p.vy = 0; if (i === 0) { p.x = s.x + d2*3; p.y = s.y + 2; } else { p.x = s.x - d2*(30 + i); p.y = s.y - 3 + i; } });
     const o2 = { ...s, t:RUCK.t.normal }; delete o2.picker; C.startSet(o2);
-    ok(o2.picker === rest[0], `the men ${30 + 1}m and more behind the ball are passed over for the nearest of all, 3m ahead of it`);
+    ok(o2.picker === rest[0], `the men ${30 + 1}m and more behind the ball are passed over for the soonest of all, 3m ahead of it`);
     RP.on = false; const o3 = { ...s, t:RUCK.t.normal }; delete o3.picker; C.startSet(o3); restore(RP, RP0);
     ok(o3.picker === rest[0], 'RUCKPICK off chooses him too');
     rest.forEach((p, i) => { p.vx = p.vy = 0; if (i === 0) { p.x = s.x + d2*3; p.y = s.y + 2; } else { p.x = s.x - d2*(30 + i); p.y = s.y - 3 + i; } });
@@ -526,9 +581,10 @@ begin('timers');
   fresh(1); noJolt(); RUCK.pen = 0; const d0 = M().diff.turnover; M().diff.turnover = -1;   // no penalties and no turnovers, so the ruck's end is plain
   // the tackler: retiring runs out, then he is a chaser and a sprinter again
   const k = bind(FRONT, 'ai', 'wrap'); run(() => M().phase === 'set', 40);
-  const q = k.q, T0 = q.offside, far0 = k.opp[1];
+  const q = k.q, T0 = q.offside, far0 = k.opp[1], s7 = M().set;
   let n = 0; while (q.offside > 0 && n++ < 400) T.update(STEP);
-  ok(near(n*STEP, T0, STEP + 1e-9) && q.down <= 0, `the tackler's retire runs out after ${T0.toFixed(2)}s give or take a step (${(n*STEP).toFixed(2)}s), with him on his feet`);
+  const W7 = s7.waited || 0;   // RUCKPICK: his clocks stand still while the ball waits at the base for your picker, so the wait is added
+  ok(near(n*STEP, T0 + W7, STEP + 1e-9) && q.down <= 0, `the tackler's retire runs out after ${T0.toFixed(2)}s and the ruck's wait (${W7.toFixed(2)}s) give or take a step (${(n*STEP).toFixed(2)}s), with him on his feet`);
   ok(q.tcd <= 0 && M().phase === 'play' && C.sprintable(q), 'then his cooldown is over and he can sprint again');
   // chasing: with the ball held by your man next to him and the other defenders down, he is the best chaser now and was not a step before
   const pick = () => { const m = M(); const c = m.players.find(p => p.team === 0 && p !== m.ball.carrier) || m.players[0]; m.ball.state = 'held'; m.ball.carrier = c; c.x = clamp(q.x - 3, 1, 119); c.y = q.y; for (const p of m.players) if (p.team === 1 && p !== q) p.down = 1; return C.bestChaser(1); };
@@ -1440,12 +1496,14 @@ begin('switch');
 }
 done('25 switch');
 
-// 26. played: the casual adult (tools/bot.mjs) with the stick held forward through every ruck of his, the repro behind 1.10.1 (RUCKPICK).
-// Last, as it reseeds: no ball from his own ruck comes out past the ruck line, and none jumps its carrier
+// 26. played: the casual adult (tools/bot.mjs) through every ruck of his, the stick held forward (the repro behind 1.10.1, RUCKPICK) and let
+// go (the default way to play). Last, as it reseeds: no ball from his own ruck comes out past the ruck line, none jumps its carrier, and
+// the man you control never changes as it comes out (the ring stays on the ruck's picker): the owner's "snaps back to another player"
+// is the ring moving, and 1.10.1's second cut moved it 5 to 17m about 1.35 times a match with the stick let go
 begin('ruck held, played');
   {
     const { PROFILES, casualStep } = await import('./bot.mjs');
-    const playHeld = (seed, diff) => {
+    const play = (seed, diff, stick) => {
       reseed(seed);
       const i = seed % 30, a = i % 6, b = (a + 1 + (i % 5)) % 6;
       T.newMatch(a, b, { halfLen:60, diff, headless:true, duels:'live', arcade:true });
@@ -1453,20 +1511,27 @@ begin('ruck held, played');
       for (let n = 0; !m.over && n < 200000; n++) {
         casualStep(PROFILES.casual, S);
         const s = m.phase === 'set' && m.set && m.set.kind === 'ruck' ? m.set : null;
-        if (s) { inp.jx = 1; inp.jy = 0; }
-        const pre = s && s.team === 0 ? m.players.map(q => ({ x:q.x, y:q.y })) : null;
+        if (s) { inp.jx = stick[0]; inp.jy = stick[1]; }
+        const pre = s && s.team === 0 ? m.players.map(q => ({ x:q.x, y:q.y })) : null, was = s && s.team === 0 ? T.sides.ctrlOf(0) : null;
         T.update(STEP);
         const c = m.ball.state === 'held' ? m.ball.carrier : null;
-        if (pre && m.phase === 'play' && c && c.team === 0) out.push({ past:(c.x - s.x)*dirOf(0), jump:dist(c, pre[m.players.indexOf(c)]), picker:c === s.picker });
+        if (pre && m.phase === 'play' && c && c.team === 0) {
+          const ring = T.sides.ctrlOf(0), from = s.picker || was;   // the man you control as the ball comes out, against the ruck's picker
+          out.push({ past:(c.x - s.x)*dirOf(0), jump:dist(c, pre[m.players.indexOf(c)]), picker:c === s.picker, sw:ring !== from || was !== from, hop:ring && from ? dist(ring, from) : 99, waited:s.waited || 0 });
+        }
       }
       for (const x of T.inputs) { x.jx = x.jy = 0; x.aPressed = x.bPressed = x.cPressed = false; x.aDown = x.bDown = x.cDown = false; x.flick = 0; }
       return out;
     };
-    const base = +process.env.SEED*100000, rel = [];
-    for (let i = 0; i < 6; i++) rel.push(...playHeld(base + i, i % 2));
-    const past = rel.filter(r => r.past > 1e-9), jumps = rel.filter(r => r.jump > 0.5), worst = Math.max(0, ...rel.map(r => r.jump));
-    ok(C.RUCKPICK.on && rel.length >= 30 && past.length === 0, `6 played matches, the stick held forward through every ruck of yours: ${rel.length} balls out, ${past.length} past the ruck line (furthest ${Math.max(...rel.map(r => r.past)).toFixed(2)}m)`);
-    ok(jumps.length === 0, `and none jumps its carrier: the most a release moved him is ${worst.toFixed(2)}m (${rel.filter(r => !r.picker).length} to a man other than the picker)`);
+    const base = +process.env.SEED*100000;
+    for (const [stick, name] of [[[1, 0], 'the stick held forward'], [[0, 0], 'the stick let go']]) {
+      const rel = [];
+      for (let i = 0; i < 6; i++) rel.push(...play(base + i, i % 2, stick));
+      const past = rel.filter(r => r.past > 1e-9), jumps = rel.filter(r => r.jump > 0.5), worst = Math.max(0, ...rel.map(r => r.jump)), sw = rel.filter(r => r.sw), waits = rel.filter(r => r.waited > 0);
+      ok(C.RUCKPICK.on && rel.length >= 30 && past.length === 0, `6 played matches, ${name} through every ruck of yours: ${rel.length} balls out, ${past.length} past the ruck line (furthest ${Math.max(...rel.map(r => r.past)).toFixed(2)}m)`);
+      ok(jumps.length === 0, `and none jumps its carrier: the most a release moved him is ${worst.toFixed(2)}m (${rel.filter(r => !r.picker).length} to a man other than the picker)`);
+      ok(sw.filter(r => r.hop > 3).length === 0, `and the man you control stays the picker as it comes out: ${sw.length} switches, ${sw.filter(r => r.hop > 3).length} over 3m (longest ${Math.max(0, ...sw.map(r => r.hop)).toFixed(2)}m); the ball held for him ${waits.length} times, ${(waits.reduce((a, r) => a + r.waited, 0)/Math.max(1, waits.length)).toFixed(2)}s on average`);
+    }
   }
 done('26 ruck held, played');
 

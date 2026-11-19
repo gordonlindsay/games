@@ -476,13 +476,13 @@ function moveAll(dt) {
     if (p.down > 0) { p.down -= dt; steer(p, 0, 0, 16, dt); continue; }
     if (ua[p.team] && ringed(p)) {
       const inp = inputOf(p.team);
+      const B = RUCKPICK.on && M.phase === 'set' && M.set && M.set.kind === 'ruck' && M.set.picker === p ? ruckBox(M.set.team, M.set.x, M.set.y) : null;
+      if (B) { const q = ruckRoute(p, B); if (q.out > RUCKPICK.in) { seek(p, q.x, q.y, maxSpeed(p), RUCKPICK.acc, dt, true); continue; } }   // RUCKPICK: out of the box (he started wide or ahead, or was pushed), he runs into it at full pace whatever the stick says, held or let go, round the ruck when he is in front of it
       if (M.phase === 'set' && M.set && M.set.kind === 'ruck' && M.set.picker === p && inp.world().mag < 1e-6) {
         const t = T.get(p);                                     // the stick let go: he still runs onto the ball, as he did before the ring moved
         if (t) { seek(p, t.x, t.y, t.s, t.a || 13, dt, t.pursue); continue; }
       }
       if (M.kids && kidsChase(p, inp, dt)) continue;           // Kids: let go of the stick and he chases on his own
-      const B = RUCKPICK.on && M.phase === 'set' && M.set && M.set.kind === 'ruck' && M.set.picker === p ? ruckBox(M.set.team, M.set.x, M.set.y) : null;
-      if (B) { const q = ruckBoxNear(p, B); if (q.out > RUCKPICK.in) { seek(p, q.x, q.y, maxSpeed(p), RUCKPICK.acc, dt, true); continue; } }   // RUCKPICK: out of the box (he started wide or ahead, or was pushed), he runs into it at full pace whatever the stick says
       userMove(p, dt, inp);                                    // any deflection places him until the ball is out
       if (B) ruckBoxHold(p, B, dt);                            // RUCKPICK: only inside the box behind the ball
       continue;
@@ -565,7 +565,7 @@ function matchUpdate(dt) {
     if (M.phase === 'play' && M.hooter && !M.demo && M.clock > periodLen() + 45) endHalf();
   } else if (M.phase === 'set') {
     M.set.t -= dt;
-    if (M.set.t <= 0) { const s = M.set; M.set = null; M.phase = 'play'; s.then(s); }
+    if (M.set.t <= 0 && !ruckWait(M.set, dt)) { const s = M.set; M.set = null; M.phase = 'play'; s.then(s); }   // RUCKPICK: a human side's ball waits at the base for its picker
   } else if (M.phase === 'goal') updateGoal(dt);
   chaseTick(dt);                                           // the kick chase's clock and its early end (src/chase.js)
   pressTick(dt);                                           // PRESSURE's resets and marks, and a knocked-on ball's beat (src/contact.js)

@@ -157,9 +157,11 @@ function maxSpeed(p) {
 }
 function nearestOf(arr, x, y) { let best = null, bd = 1e9; for (const p of arr) { const d = hyp(p.x-x, p.y-y); if (d < bd) { bd = d; best = p; } } return best; }
 function nearestFree(team, x, y) { return nearestOf(M.players.filter(p => p.team === team && p.down <= 0 && !p.bind), x, y); }
-function ruckPicker(team, s, m) {                         // RUCKPICK: the nearest free man behind the ball who can reach its base (the box, no deeper than `deep`) before it comes out; the nearest of all only if there is none
+function ruckPicker(team, s, m) {                         // RUCKPICK: the nearest free man behind the ball who can reach its base (the box, no deeper than `deep`) before it comes out; failing that, the nearest behind it who can with the ball held for him (`wait`); failing that, whoever of all gets there soonest
   const d = dirOf(team), free = M.players.filter(p => p.team === team && p.down <= 0 && !p.bind), B = { ...ruckBox(team, s.x, s.y), a0:-RUCKPICK.deep };
-  return nearestOf(free.filter(p => (p.x - s.x)*d <= 0 && ruckReach(p, B) <= s.t - RUCKPICK.spare), m.x, m.y) || nearestOf(free, m.x, m.y);
+  const reach = new Map(free.map(p => [p, ruckReach(p, B)])), behind = free.filter(p => (p.x - s.x)*d <= 0);
+  const by = lim => nearestOf(behind.filter(p => reach.get(p) <= lim), m.x, m.y);
+  return by(s.t - RUCKPICK.spare) || by(s.t + RUCKPICK.wait - RUCKPICK.spare) || free.reduce((a, p) => (!a || reach.get(p) < reach.get(a) ? p : a), null);
 }
 function ruckBox(team, x, y) {                             // RUCKPICK's box behind the ball: along (metres past the ruck line) at most -ahead, aside within wide of the mark and never over the touchline
   const d = dirOf(team);
@@ -169,12 +171,41 @@ function ruckBoxNear(p, B) {                               // the box's nearest 
   const a = (p.x - B.x)*B.d, a2 = clamp(a, B.a0, B.a1), y2 = clamp(p.y, B.y0, B.y1);
   return { x:B.x + B.d*a2, y:y2, out:hyp(a - a2, p.y - y2) };
 }
-function ruckReach(p, B) {                                 // the seconds he needs to reach the box at full pace (seek's acceleration), braking first from any pace away from it
+function ruckRoute(p, B) {                                 // where he runs to get into the box, and how far it is: its nearest point; or, in front of the ball (the ruck line) and within `round` m of the mark aside, first to `round` m aside, no more than `front` m in front, so he goes round the men on the ground (the tackled man and the tackler) rather than into them
   const q = ruckBoxNear(p, B);
+  if (q.out <= 0) return { ...q, len:0 };
+  const a = (p.x - B.x)*B.d, dy = p.y - B.y, R = RUCKPICK.round;
+  if (a <= 0 || Math.abs(dy) >= R) {                       // aimed `inset` m inside the edge, so he crosses it rather than pulling up short of it
+    const I = RUCKPICK.inset, a2 = clamp(a, B.a0 + I, B.a1 - I), y2 = clamp(p.y, Math.min(B.y0 + I, B.y), Math.max(B.y1 - I, B.y));
+    return { x:B.x + B.d*a2, y:y2, out:q.out, len:q.out };
+  }
+  let side = dy >= 0 ? 1 : -1;
+  if (B.y + side*R > 70 - RUCKPICK.touch || B.y + side*R < RUCKPICK.touch) side = -side;   // never round the touchline side
+  const wa = Math.min(a, RUCKPICK.front), wy = B.y + side*R;
+  return { x:B.x + B.d*wa, y:wy, out:q.out, len:hyp(a - wa, p.y - wy) + (wa - B.a1) };
+}
+function ruckReach(p, B) {                                 // the seconds he needs to reach the box at full pace (seek's acceleration) on the route he runs (ruckRoute), braking first from any pace away from it
+  const q = ruckRoute(p, B);
   if (q.out < 1e-6) return 0;
-  const V = maxSpeed(p), A = RUCKPICK.acc, away = Math.max(0, -(p.vx*(q.x - p.x) + p.vy*(q.y - p.y))/q.out);
-  const D = q.out + away*away/(2*A), run = D <= V*V/(2*A) ? Math.sqrt(2*D/A) : V/A + (D - V*V/(2*A))/V;
+  const to = Math.max(1e-6, hyp(q.x - p.x, q.y - p.y));
+  const V = maxSpeed(p), A = RUCKPICK.acc, away = Math.max(0, -(p.vx*(q.x - p.x) + p.vy*(q.y - p.y))/to);
+  const D = q.len + away*away/(2*A), run = D <= V*V/(2*A) ? Math.sqrt(2*D/A) : V/A + (D - V*V/(2*A))/V;
   return away/A + run;
+}
+function ruckBehind(team, x, y, m, but) {                  // the nearest free man to the mark at or behind the ruck line (other than `but`), or null
+  const d = dirOf(team);
+  return nearestOf(M.players.filter(q => q !== but && q.team === team && q.down <= 0 && !q.bind && (q.x - x)*d <= 0), m.x, m.y);
+}
+function ruckWait(s, dt) {                                 // RUCKPICK: the ball held at the base until a human side's picker is in the box (released on the step he gets there), for `wait` s at most, or `waitLast` when nobody but him is at or behind the ruck line to take it. The defence holds its ruck line meanwhile, and the tackler stays down
+  const p = s.picker;
+  if (!RUCKPICK.on || s.kind !== 'ruck' || !p || p.team !== s.team || !isHuman(s.team) || !onFeet(p)) return false;
+  if (ruckBoxNear(p, ruckBox(s.team, s.x, s.y)).out <= RUCKPICK.in) return false;
+  const w = s.waited || 0;
+  if (w >= RUCKPICK.wait - 1e-9 && (w >= RUCKPICK.waitLast - 1e-9 || ruckBehind(s.team, s.x, s.y, playFrom(s.team, s.x, s.y, 'ruck'), p))) return false;
+  s.waited = (s.waited || 0) + dt;
+  const q = s.tackler;                                     // his clocks stand still while it waits, so he is still down and retiring when it comes out, as the ruck had him
+  if (q) for (const k of ['down', 'tcd', 'offside']) if (q[k] > 0) q[k] += dt;
+  return true;
 }
 function ruckBoxPut(p, B) {                                // a picker a push moved just out of the box back on its edge: a collision-sized correction only, never a jump
   const q = ruckBoxNear(p, B);
@@ -299,9 +330,9 @@ function releaseTo(team, x, y, kind, who) {
   const m = playFrom(team, x, y, kind);
   let pinned = kind === 'ruck' && who && who.team === team && onFeet(who) ? who : null;   // the man the stick was placing picks it up, wherever he was put; a turnover never asks for him
   let base = null;
-  if (pinned && RUCKPICK.on && !ruckBoxPut(pinned, ruckBox(team, x, y))) {   // RUCKPICK: a push moved him just out of the box, so he takes it on its edge
-    pinned = null;                                         // further out (he never got there), the nearest free man to the mark at or behind the ruck line has it where he stands
-    base = nearestOf(M.players.filter(q => q.team === team && q.down <= 0 && !q.bind && (q.x - x)*d <= 0), m.x, m.y);
+  if (kind === 'ruck' && RUCKPICK.on && isHuman(team) && !(pinned && ruckBoxPut(pinned, ruckBox(team, x, y)))) {   // RUCKPICK: a push moved him just out of the box, so he takes it on its edge
+    pinned = null;                                         // further out (he never got there, even with the ball held for him), or no picker on his feet: the nearest free man to the mark at or behind the ruck line has it where he stands
+    base = ruckBehind(team, x, y, m);
   }
   const p = pinned || base || nearestFree(team, m.x, m.y) || M.players.find(q => q.team === team);
   if (kind === 'scrum' || kind === 'lineout') {   // the scrum-half or catcher takes it at the mark, whoever won it
