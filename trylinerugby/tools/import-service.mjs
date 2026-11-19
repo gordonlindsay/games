@@ -351,7 +351,7 @@ const shaped = d => Object.keys(d).every(k => ['source', 'club', 'teams', 'leagu
 // 5. its Vercel set-up and its words
 {
   const vj = JSON.parse(read('import-service/vercel.json')), pkg = JSON.parse(read('import-service/package.json'));
-  ok(vj.functions['api/import.js'].maxDuration === 60 && JSON.stringify(vj.regions) === '["lhr1"]' && vj.ignoreCommand === 'if [ -z "$VERCEL_GIT_PREVIOUS_SHA" ]; then exit 1; fi; git diff --quiet "$VERCEL_GIT_PREVIOUS_SHA" HEAD -- .', 'vercel.json: 60 seconds, London, and no deploy unless this folder changed since the last one');
+  ok(vj.functions['api/import.js'].maxDuration === 60 && JSON.stringify(vj.regions) === '["lhr1"]' && vj.ignoreCommand === 'if [ -z "$VERCEL_GIT_PREVIOUS_SHA" ] || ! git cat-file -e "$VERCEL_GIT_PREVIOUS_SHA^{commit}" 2>/dev/null; then exit 1; fi; git diff --quiet "$VERCEL_GIT_PREVIOUS_SHA" HEAD -- .', 'vercel.json: 60 seconds, London, and no deploy unless this folder changed since the last one');
   // the ignoreCommand, run as Vercel runs it (in the root directory; exit 0 skips the build), in a scratch repository: it compares with the last
   // deployed commit, so a change in an earlier commit of a push still deploys, the first deploy always builds, and an unknown commit builds
   {
@@ -366,6 +366,8 @@ const shaped = d => Object.keys(d).every(k => ['source', 'club', 'teams', 'leagu
       fs.writeFileSync(path.join(scratch, 'svc/a'), '2'); git('commit', '-qam', 'the service'); fs.writeFileSync(path.join(scratch, 'b'), '2'); git('commit', '-qam', 'elsewhere again');
       ok(!skip(deployed), 'ignoreCommand: a push whose change to the folder is not in its last commit still deploys');
       ok(!skip('0123456789abcdef0123456789abcdef01234567'), 'ignoreCommand: a last deploy it cannot find (a shallow clone) builds');
+      { let code = null; try { execFileSync('sh', ['-c', vj.ignoreCommand], { cwd:path.join(scratch, 'svc'), env:{ ...process.env, VERCEL_GIT_PREVIOUS_SHA:'0123456789abcdef0123456789abcdef01234567' }, stdio:'ignore' }); code = 0; } catch (e) { code = e.status; }
+        ok(code === 1, 'ignoreCommand: a last deploy it cannot find exits 1 (build), never git\'s 128, which Vercel reports as an error'); }
     } finally { fs.rmSync(scratch, { recursive:true, force:true }); }
   }
   ok(S.BUDGET === 45000 && S.BUDGET < vj.functions['api/import.js'].maxDuration * 1000 && S.MAX_BODY === 4096, 'a 45-second budget, under the function\'s 60; 4KB of body');

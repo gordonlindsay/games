@@ -15,7 +15,7 @@ Why it exists: a browser cannot read a Pitchero page from the game's site, becau
 | `api/import.js` | The function. It is `lib/service.cjs`'s handler over `node:https` and `node:dns`. |
 | `lib/service.cjs` | The handler: the request rules, the address check, the network, the rate limit. |
 | `lib/import-core.cjs` | **Generated, do not edit.** `tools/build.mjs` makes it from the game's own `src/import-core.js` (the parsers, the safeguarding filter and the fetch-and-follow), with `colorDist` and the two lines it needs from `src/data.js` and `src/match.js`. `node tools/build.mjs --check` fails while it is out of date, as it does for `game.js`. |
-| `vercel.json` | 60 seconds a call, London, and an `ignoreCommand` that skips a deploy when nothing in this folder has changed since the last one (`VERCEL_GIT_PREVIOUS_SHA`; the first deploy always builds). |
+| `vercel.json` | 60 seconds a call, London, and an `ignoreCommand` that skips a deploy when nothing in this folder has changed since the last one (`VERCEL_GIT_PREVIOUS_SHA`; it builds when there is no last deploy, or when that commit is not in Vercel's clone). |
 | `package.json` | Node 22, CommonJS, no dependencies. |
 
 ## The request
