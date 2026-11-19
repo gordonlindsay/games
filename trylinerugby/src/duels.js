@@ -26,6 +26,25 @@ const DOM_TURN = [0.25, 0.35], DOM_RUCK = 1.6, LINE_SPEED = 2.5;
    CONTACT='{"bind":0.3}' SPRINT='{"mul":[1.25,1.25,1.2]}' node tools/bot.mjs tries values without an edit. Arrays are by level (Easy, Normal, Hard). */
 const CONTACT = { bind:0.25, side:1.10, contact:[0.58,0.42,0.42], dive:[0.66,0.50], ankle:0.55, diveDown:0.75, brokenDown:0.5, stumble:[0.15,0.9], slide:[0.5,0.95], downR:0.95, second:{ r:1.3, toDom:0.35, softToWrap:0.35 }, dom:{ base:0.14, pow:0.04, front:0.03, dive:0.08, sprint:0.10, cpu:[-0.03,0,0.03] }, soft:{ base:0.22, behind:0.25, fast:0.08, pow:0.04 }, fend:{ pow:1, margin:0.35 }, trip:{ p:0.4, t:0.5, mul:0.5 }, jolt:{ dom:0.09, wrap:0.02, soft:0.01, fwd:0.55 }, off:{ soft:0.85, wrap:0.70, range:9, cpu:0.10, hold:0.5, knock:0.55 } };
 const RUCK = { t:{ quick:0.7, normal:1.0, slow:1.5 }, quickLead:0.3, attHead:0.35, gate:3.5, retire:0.6, flatBase:0.11, pen:0.045, wf:{ r:3, t:0.7, mul:0.5 } };
+/* The ruck picker (1.10.1): a human side's ruck moves the ring to the man who will pick the ball up, and the stick places him while the
+   ruck is down. He is the nearest free man at or behind the ruck line who can reach its base (the box below, no deeper than `deep` m
+   behind the line) at full pace (`acc`, braking first from any pace away from it, on the route he runs) with `spare` s to go before
+   the ball comes out; failing that, the nearest behind it who can with the ball held for him (`wait`); failing that, whoever of all
+   gets there soonest. The box is behind the ball: from `ahead` m behind the ruck line back, within `wide` m either side of the mark,
+   and `touch` m in from either touchline. Inside it the stick moves him and he slides along its edge; outside it (by more than `in` m)
+   he runs into it at full pace whatever the stick says, held or let go, aimed `inset` m inside its edge, through his own standing
+   team-mates, and round the men on the ground (out past `round` m aside, aimed `inset` m beyond it, no more than `front` m in
+   front) when he starts in front of the ball beside the ruck. An opponent's shove never moves him, in the box or on his way in (`shield`: the opponent steps round
+   him). When the ruck's time is up and he is still outside, the ball waits at the base for him (released on the step he gets in)
+   for `wait` s at most, or `waitLast` s when nobody else is at or behind the ruck line; the defence holds its ruck line and the
+   tackler stays down meanwhile. A man a shove has just nudged out, within `put` and not running in, is not waited on: he takes it
+   on the box's edge at once (the wait let the same man shove him on out of reach). So the man you control is the man who takes it.
+   releaseTo puts him back on the box's edge if a push moved him out by `put` m or less, a collision's size; further out, he is not
+   pinned, and the nearest free man to the mark at or behind the ruck line (any man only if none is) takes it where he stands, so
+   the ball never jumps a man across the pitch. A thumb still pushing forward from the run used to drive him 4 to 11m through the
+   gap the defence leaves, and the ball appeared on him there. CPU sides never have a picker, a wait or a shield.
+   RUCKPICK='{"on":false}' is 8fb3bc0 (1.10) draw for draw. */
+const RUCKPICK = { on:true, ahead:0.5, wide:5, touch:0.5, deep:4, in:0.02, acc:20, spare:0.1, put:0.35, wait:1.0, waitLast:3.0, round:2.4, front:2.0, inset:0.15, shield:true };
 const SPRINT = { mul:[1.25,1.25,1.20], mulBall:[1.06,1.06,1.05], secs:2.0, ballDrain:1.5, refill:[7,10,10], floor:0.2, fade:0.3, pick:4, cpu:{ chase:[0.1,0.12,0.2], chaseLast:[0,0,0], carry:[0,0.05,0.3], carryLast:[0,0,0], lane:15, min:2.5, max:12, space:6, keep:2.5, think:0.25 } };
 const INSTANT = [0.85, 0.70, 0.55];
 // Key Pass: how often the defender drifts onto the runner (Dummy is right) and, when he doesn't, how often he fakes a drift first

@@ -67,6 +67,7 @@ if (process.argv.includes('--pins')) {                     // PRESSURE and the m
 begin('off is b706c3e');
 {
   if (KN) KN.on = false; if (CL) CL.on = false; if (CS) CS.on = false;
+  const RP = T.contact.RUCKPICK, RP0 = !!(RP && RP.on); if (RP) RP.on = false;   // the ruck picker (1.10.1) postdates every build pinned here, so it is off for them, as it is in the children (offRun)
   const [pOff, pMaul] = RERATE ? [OFF_R, OFF_MAUL_R] : [OFF, OFF_MAUL];
   P.PRESSURE.on = false; if (MA) MA.on = false; const now = offPins(); if (MA) MA.on = true; P.PRESSURE.on = true;
   ok(now === pOff, `PRESSURE off, and the maul (merged after it) off: AI v AI, the demo, a tool's match, a Kids match and a Minis match play as b706c3e, with the same draws (${now}, pinned ${pOff}${RERATE ? ', b706c3e\'s with the rerating' : ''})`);
@@ -79,7 +80,7 @@ begin('off is b706c3e');
   ok(on !== pOff, `PRESSURE on moves them, on purpose (${on})`);
   const e1 = eggPin(); P.PRESSURE.on = false; const e0 = eggPin(); P.PRESSURE.on = true;
   ok(e1 === EGG && e0 === EGG, `Bouncy Egg's hops and draws are the build before pressure's, PRESSURE on or off (${e1}, ${e0}, pinned ${EGG})`);
-  if (KN) KN.on = true; if (CL) CL.on = CL0; if (CS) CS.on = CS0;
+  if (KN) KN.on = true; if (CL) CL.on = CL0; if (CS) CS.on = CS0; if (RP) RP.on = RP0;
 }
 done('0 off is b706c3e');
 

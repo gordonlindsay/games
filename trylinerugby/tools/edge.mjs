@@ -63,7 +63,8 @@ const SHIPS = { same:'1ru8ljp g0q4ru 1wmj5sn 1kps42k fqhmon h0aw10 1332o5j', eas
    did (rerateProofs). Here the edge's own claims are checked again (EDGE on leaves SAME where EDGE off has it, and moves EASY) and the
    world's own pins are R_BASE, R_ON and R_SHIPS. */
 const R_BASE = { same:'1hzoeux ishkxt w5sz4v a3ytt3 1a6etmy xsjv6d 16fylst', easy:'lwmcb9 h2wwgi 15evn0w' }, R_ON = 'omto7e wjfo1c 1pas51w';
-const R_SHIPS = { same:'1ru8ljp g0q4ru q4pz7f 1kps42k fqhmon tf69zl u8h0sf', easy:'1x1rx2c wjfo1c 1ubzdoa' };
+const R_SHIPS = { same:'1ru8ljp g0q4ru 18xwuut 1e72dw1 1hzu2jg t0e8uk 1ddhfms', easy:'xa5h6y 1xn2x4w 1od5swp' };   // re-pinned at the ruck picker (1.10.1, RUCKPICK, src/duels.js), and again at its fourth cut (19 Nov: the picker shielded from opponents' shoves while the ruck is down, and the ball no longer held for a man a shove nudged just out of the box): the tool's balance match and the arcade matches, where the bot plays your side's rucks, moved; AI v AI, the demo, Two Player and the Kids matches did not (the Easy match did not either until the ball was held at the base for the picker, 1.10.1's third cut, which moved it too). With RUCKPICK off this build gives R_SHIPS_RUCK, 8fb3bc0's pin, exactly (checked below); BASE, ON and the older pins are builds before it, so they are checked with it off
+const R_SHIPS_RUCK = { same:'1ru8ljp g0q4ru q4pz7f 1kps42k fqhmon tf69zl u8h0sf', easy:'1x1rx2c wjfo1c 1ubzdoa' };   // 8fb3bc0 (1.10)
 const line = (off, on, ships) => [off.same, off.easy, on.easy, ships.same, ships.easy].join(' / ');
 if (process.argv.includes('--pins')) {
   if (E) E.EDGE.on = false; if (KN) KN.on = false; if (CL) CL.on = false; if (CS) CS.on = false;
@@ -71,9 +72,12 @@ if (process.argv.includes('--pins')) {
 }
 begin('0 EDGE off is 90353c3');
 if (LOCAL_ON) {
-  if (KN) KN.on = false; if (CL) CL.on = false; if (CS) CS.on = false;
+  const RP = T.contact.RUCKPICK, RP0 = !!(RP && RP.on);   // the ruck picker (1.10.1): off for every build before it, as in the children (offRun)
+  if (KN) KN.on = false; if (CL) CL.on = false; if (CS) CS.on = false; if (RP) RP.on = false;
   E.EDGE.on = false; const off = pins(); E.EDGE.on = true; const on = pins();
-  if (KN) KN.on = true; if (CL) CL.on = CL0; if (CS) CS.on = CS0; const ships = pins();
+  if (KN) KN.on = true; if (CL) CL.on = CL0; if (CS) CS.on = CS0; const ships0 = pins();
+  if (RP) RP.on = RP0; const ships = RP0 ? pins() : ships0;
+  if (RERATE && RP0) ok(ships0.same === R_SHIPS_RUCK.same && ships0.easy === R_SHIPS_RUCK.easy, `with the ruck picker as 1.10 (RUCKPICK off), as 8fb3bc0 (${ships0.same} / ${ships0.easy}, pinned ${R_SHIPS_RUCK.same} / ${R_SHIPS_RUCK.easy})`);
   if (LOCAL_CHILD) { console.log(line(off, on, ships)); process.exit(failed ? 1 : 0); }   // the rerating off child (rerateProofs): 8089294's pins
   await rerateProofs(new URL(import.meta.url), line(BASE, { easy:ON }, SHIPS), ok);
   const b = RERATE ? [R_BASE, R_ON, R_SHIPS] : [BASE, ON, SHIPS];

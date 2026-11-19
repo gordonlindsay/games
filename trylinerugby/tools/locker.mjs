@@ -13,7 +13,7 @@
 // node tools/locker.mjs            (SEED=37 unless set; VERBOSE=1 lists every check)
 // node tools/locker.mjs --pins     prints this build's fingerprints; GAME=<d6192ad>/index.html node tools/locker.mjs --pins re-pins BASE
 process.env.SEED ??= '37';
-const { T, reseed, rndCalls, bot, kickBot, LOCAL_ON, RERATE, LOCAL_CHILD, rerateProofs } = await import('./harness.mjs');
+const { T, reseed, rndCalls, bot, kickBot, LOCAL_ON, RERATE, LOCAL_CHILD, rerateProofs, ruckpickProof } = await import('./harness.mjs');
 const { readGameSource } = await import('./source.mjs');
 import fs from 'node:fs';
 import path from 'node:path';
@@ -61,7 +61,8 @@ const BASE = '1wrndtb 1bjwyb7 128o11d pzuc8b 1dl94g2 1supghy myd41f';   // 1.6 (
 /* BASE re-pinned for the owner's rerating (LOCAL, 14 Nov 2026: "rerate the lower clubs - farnham shouldnt be as high as they are"):
    Farnham and Haslemere, a step down, play two of these matches, so it moves to R_BASE. With LOCAL off (1.6) and with the rerating off
    (8089294) this build gives BASE exactly, LOCAL off the chain below too (each in a child: rerateProofs). */
-const R_BASE = '1wrndtb 1bjwyb7 128o11d cuegvj xhs9wt 1supghy 1aorlxi';
+const R_BASE = '1wrndtb 1bjwyb7 128o11d 25mtcu 7wong6 1supghy m172pz';   // re-pinned at the ruck picker (1.10.1, RUCKPICK, src/duels.js), and again at its fourth cut (19 Nov: the picker shielded from opponents' shoves while the ruck is down, and the ball no longer held for a man a shove nudged just out of the box): the tool's match and the played Quick Match, where the bot plays your side's rucks, moved, and with them the count of random draws; AI v AI, the demo, the balance tool's match and the drill did not. With RUCKPICK='{"on":false}' this build gives BEFORE_RUCKPICK, 8fb3bc0's pin, exactly (checked first, in a child: ruckpickProof)
+const BEFORE_RUCKPICK = '1wrndtb 1bjwyb7 128o11d cuegvj xhs9wt 1supghy 1aorlxi';   // 8fb3bc0 (1.10)
 const WITH_CALLS = '1xa81wd 1bjwyb7 ob14gy zxhids 10orex2 1supghy j9mm9i';   // the calls on and the chase off, wt/calls' pin (a032b3a), a third or later run's: re-pinned for the possession calls and the interception rules (src/calls.js, 2026-11-13), which act everywhere on purpose (nobody intercepts out of the passer's hands, nobody down, retiring or offside plays the ball, and the calls count their tags)
 const WITH_CHASE = '16b03c4 1ncbbu6 umf357 1qui2ii 1pe3v50 1supghy 16dozrz';   // the chase on and the calls off, wt/chase's pin (fc90ec0), a third or later run's: re-pinned for the kick chase (src/chase.js, 2026-11-13), which acts on every open-play kick on purpose, and again the same day for its react 0 (pace alone, the owner's choice: CHASE='{"react":0.2}' gives 98e11c8's kw40od 1ncbbu6 umf357 118bwkd 1pe3v50 1supghy 2aq8cr, as a third run)
 const BEFORE_CALLS_CHASE = '1en9k3t 1ncbbu6 umf357 1myi7ax 1nvpf7p 1supghy 4ytog3';   // b4a25d5's pin, the calls and the chase both off, the second run in the process, as BASE was at b4a25d5: re-pinned for the knock-ons (src/knock.js, 2026-11-11), which act everywhere on purpose; with KNOCK='{"on":false}' (and the calls and the chase off) this build gives BEFORE_KNOCK, 20cbcaf's pin, exactly (checked first, below)
@@ -96,6 +97,7 @@ if (process.argv.includes('--pins')) { console.log(pins()); process.exit(0); }
 { const now = pins();
   if (LOCAL_CHILD) { console.log(now); process.exit(failed ? 1 : 0); }   // the LOCAL children (rerateProofs) print theirs
   if (LOCAL_ON) await rerateProofs(new URL(import.meta.url), BASE, ok);
+  if (RERATE) await ruckpickProof(new URL(import.meta.url), BEFORE_RUCKPICK, ok);
   const pin = RERATE ? R_BASE : BASE;
   ok(now === pin, `AI v AI, the demo, a balance tool's match, a tool's match, a played Quick Match and a drill play as at d6192ad, with the same random draws (seeded fingerprint ${now}, pinned ${pin})`); }
 

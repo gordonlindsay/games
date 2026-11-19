@@ -63,9 +63,10 @@ if (process.env.CHASE) js = js.replace('// CHASE_TUNE', `{ const deep = (a, b) =
 // CHASE_LATE=off builds the game without the catching side's late start (matchTargets' chaseLate line, src/movement.js): at react 0, as
 // the chase ships, the game plays exactly as this build, draw for draw (tools/chase.mjs section 0, the proof that the path is a no-op there)
 if (process.env.CHASE_LATE === 'off') { const cut = js.replace(/\n  if \(mode === 'kick' && chaseLate\(att\)\)[^\n]*/, ''); if (cut === js) throw new Error('CHASE_LATE=off: the late-start line is not in the build'); js = cut; }
-// CONTACT='{"bind":0.3}' RUCK='{"flatBase":0.09}' SPRINT='{"mul":[1.25,1.25,1.2]}' RUNON='{"cpu":0.6}' PASS_FLIGHT='{"kids":1.4}' SUPPORT='{"mark":4}' MOVES='{"step":{"push":4}}' DUEL_SLOW='{"rate":1}' TDUEL='{"hold":0.3}' PRESSURE='{"on":false}' deep-merge into the contact, ruck, Sprint, passing, pass flight, support, open-play move, duel slow-motion, Tackle duel trigger and pressure levers
+// CONTACT='{"bind":0.3}' RUCK='{"flatBase":0.09}' SPRINT='{"mul":[1.25,1.25,1.2]}' RUNON='{"cpu":0.6}' PASS_FLIGHT='{"kids":1.4}' SUPPORT='{"mark":4}' MOVES='{"step":{"push":4}}' DUEL_SLOW='{"rate":1}' TDUEL='{"hold":0.3}' PRESSURE='{"on":false}' RUCKPICK='{"on":false}' deep-merge into the contact, ruck, Sprint, passing, pass flight, support, open-play move, duel slow-motion, Tackle duel trigger, pressure and ruck picker levers
+// (RUCKPICK off: the ruck picker as 8fb3bc0 (1.10), the nearest man to the mark and a stick that places him anywhere, draw for draw: the proof behind 1.10.1's re-pins)
 {
-  const tune = ['CONTACT', 'RUCK', 'SPRINT', 'RUNON', 'PASS_FLIGHT', 'SUPPORT', 'MOVES', 'DUEL_SLOW', 'TDUEL', 'PRESSURE'].filter(k => process.env[k]).map(k => `deep(${k}, ${process.env[k]});`).join(' ');
+  const tune = ['CONTACT', 'RUCK', 'SPRINT', 'RUNON', 'PASS_FLIGHT', 'SUPPORT', 'MOVES', 'DUEL_SLOW', 'TDUEL', 'PRESSURE', 'RUCKPICK'].filter(k => process.env[k]).map(k => `deep(${k}, ${process.env[k]});`).join(' ');
   if (tune) js = js.replace('// CONTACT_TUNE', `{ const deep = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = (v && typeof v === 'object' && !Array.isArray(v)) ? deep(Object.assign({}, a[k]), v) : v; return a; }; ${tune} }`);
 }
 
@@ -74,10 +75,11 @@ const mulberry = () => { seedState = seedState + 0x6D2B79F5 | 0; let t = Math.im
 if (process.env.SEED) { seedState = +process.env.SEED >>> 0; Math.random = mulberry; }   // swapped in before the game captures Math.random
 /* A tool run again with the county clubs off (LOCAL='{"on":false}': 1.6), as LOCAL_CHILD: the child runs the checks of 1.6's world (the older
    pins' chain, which it alone can check: LOCAL acts as the game loads), prints its pin as its last line and exits. Every re-pin LOCAL moved
-   checks its 1.6 pin (BEFORE_LOCAL) this way first. { last, fails }: that line, and any FAIL lines the child printed. */
+   checks its 1.6 pin (BEFORE_LOCAL) this way first. { last, fails }: that line, and any FAIL lines the child printed. Every child proves a world
+   older than 1.10.1, so it runs with the ruck picker as it was then (RUCKPICK off: 8fb3bc0's, draw for draw) unless env says otherwise. */
 export async function offRun(fileUrl, env = {}) {
   const { spawnSync } = await import('node:child_process'), { fileURLToPath } = await import('node:url');
-  const out = spawnSync(process.execPath, [fileURLToPath(fileUrl)], { env:{ ...process.env, LOCAL:'{"on":false}', LOCAL_CHILD:'1', ...env }, encoding:'utf8', maxBuffer:64*1024*1024 });
+  const out = spawnSync(process.execPath, [fileURLToPath(fileUrl)], { env:{ ...process.env, LOCAL:'{"on":false}', RUCKPICK:'{"on":false}', LOCAL_CHILD:'1', ...env }, encoding:'utf8', maxBuffer:64*1024*1024 });
   const lines = ((out.stdout || '') + (out.stderr || '')).trim().split('\n').filter(Boolean);
   return { last:(out.stdout || '').trim().split('\n').filter(Boolean).pop() || '', fails:lines.filter(l => /^FAIL|Error/.test(l)), status:out.status };
 }
@@ -155,6 +157,14 @@ export async function spreadProof(fileUrl, before, ok) {
   if (!RERATE) return;
   const r = await offRun(fileUrl, { LOCAL:'{}', CLUB_RATED:SPREAD_OFF });
   ok(!r.fails.length && r.last === before, `with Counties 5 back at 40 (CLUB_RATED, the four spread sides at the floor: every side as b8c634e), as b8c634e (${r.last}, pinned ${before}${r.fails.length ? '; ' + r.fails.join('; ') : ''})`);
+}
+/* The ruck picker (1.10.1, RUCKPICK in src/duels.js): a human side's ruck picker from behind the ball and kept in a box near its base, so every
+   pin a bot plays a human side's rucks in moved; AI v AI and the demo did not (no CPU ruck has a picker). ruckpickProof(url, before, ok): a
+   re-pinned tool run again in a child (offRun) with the county clubs as they ship and RUCKPICK off, giving its pin from 8fb3bc0 (1.10),
+   `before`, exactly. */
+export async function ruckpickProof(fileUrl, before, ok) {
+  const r = await offRun(fileUrl, { LOCAL:'{}', RUCKPICK:'{"on":false}' });
+  ok(!r.fails.length && r.last === before, `with the ruck picker as 1.10 (RUCKPICK off), as 8fb3bc0 (${r.last}, pinned ${before}${r.fails.length ? '; ' + r.fails.join('; ') : ''})`);
 }
 export const camStart = T.debug.settings().cam;   // the camera this boot opened on, before the line below
 T.debug.settings().cam = 0;                       // the tools write the stick in world directions, so they play on Top unless they ask for a behind view (camera.mjs does, with its own turn)

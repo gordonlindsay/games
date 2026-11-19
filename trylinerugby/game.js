@@ -5,7 +5,7 @@ let practice = null;
 /* The game's own version, small at the foot of Settings and on window.__tryline (the owner, 2026-11-11: "bump GAME_VERSION to 1.2", on
    top of main's 1.1 from PR #17, which showed it after the home's tagline; the tidied home has no tagline, so Settings is its one place).
    The app's store version (app/package.json, 1.0.0) is the app's, and apart from this. */
-const GAME_VERSION = '1.10';
+const GAME_VERSION = '1.10.1';
 
 /* =========================================================
    Data
@@ -2318,6 +2318,71 @@ function maxSpeed(p) {
 }
 function nearestOf(arr, x, y) { let best = null, bd = 1e9; for (const p of arr) { const d = hyp(p.x-x, p.y-y); if (d < bd) { bd = d; best = p; } } return best; }
 function nearestFree(team, x, y) { return nearestOf(M.players.filter(p => p.team === team && p.down <= 0 && !p.bind), x, y); }
+function ruckPicker(team, s, m) {                         // RUCKPICK: the nearest free man behind the ball who can reach its base (the box, no deeper than `deep`) before it comes out; failing that, the nearest behind it who can with the ball held for him (`wait`); failing that, whoever of all gets there soonest
+  const d = dirOf(team), free = M.players.filter(p => p.team === team && p.down <= 0 && !p.bind), B = { ...ruckBox(team, s.x, s.y), a0:-RUCKPICK.deep };
+  const reach = new Map(free.map(p => [p, ruckReach(p, B)])), behind = free.filter(p => (p.x - s.x)*d <= 0);
+  const by = lim => nearestOf(behind.filter(p => reach.get(p) <= lim), m.x, m.y);
+  return by(s.t - RUCKPICK.spare) || by(s.t + RUCKPICK.wait - RUCKPICK.spare) || free.reduce((a, p) => (!a || reach.get(p) < reach.get(a) ? p : a), null);
+}
+function ruckBox(team, x, y) {                             // RUCKPICK's box behind the ball: along (metres past the ruck line) at most -ahead, aside within wide of the mark and never over the touchline
+  const d = dirOf(team);
+  return { d, x, y, a0:-Infinity, a1:-RUCKPICK.ahead, y0:Math.max(y - RUCKPICK.wide, RUCKPICK.touch), y1:Math.min(y + RUCKPICK.wide, 70 - RUCKPICK.touch) };
+}
+function ruckBoxNear(p, B) {                               // the box's nearest point to him, and how far out of it he is (0 inside). The box has no back edge (a0), bar the picker's choice
+  const a = (p.x - B.x)*B.d, a2 = clamp(a, B.a0, B.a1), y2 = clamp(p.y, B.y0, B.y1);
+  return { x:B.x + B.d*a2, y:y2, out:hyp(a - a2, p.y - y2) };
+}
+function ruckRoute(p, B) {                                 // where he runs to get into the box, and how far it is: its nearest point; or, in front of the ball (the ruck line) and within `round` m of the mark aside, first out past `round` m aside, no more than `front` m in front, so he goes round the men on the ground (the tackled man and the tackler) rather than into them
+  const q = ruckBoxNear(p, B);
+  if (q.out <= 0) return { ...q, len:0 };
+  const a = (p.x - B.x)*B.d, dy = p.y - B.y, R = RUCKPICK.round, I = RUCKPICK.inset;
+  if (a <= 0 || Math.abs(dy) >= R) {                       // aimed `inset` m inside the edge, so he crosses it rather than pulling up short of it
+    const a2 = clamp(a, B.a0 + I, B.a1 - I), y2 = clamp(p.y, Math.min(B.y0 + I, B.y), Math.max(B.y1 - I, B.y));
+    return { x:B.x + B.d*a2, y:y2, out:q.out, len:q.out };
+  }
+  const W = R + I;                                         // the waypoint `inset` m past `round` aside, as the box's is inside its edge: seek stops dead within 0.05m of its target, so aimed at `round` itself he could stand still just short of it and never turn into the box (1.10.1's second to fourth cuts, once in about 3,000 matches)
+  let side = dy >= 0 ? 1 : -1;
+  if (B.y + side*W > 70 - RUCKPICK.touch || B.y + side*W < RUCKPICK.touch) side = -side;   // never round the touchline side
+  const wa = Math.min(a, RUCKPICK.front), wy = B.y + side*W;
+  return { x:B.x + B.d*wa, y:wy, out:q.out, len:hyp(a - wa, p.y - wy) + (wa - B.a1) };
+}
+function ruckReach(p, B) {                                 // the seconds he needs to reach the box at full pace (seek's acceleration) on the route he runs (ruckRoute), braking first from any pace away from it
+  const q = ruckRoute(p, B);
+  if (q.out < 1e-6) return 0;
+  const to = Math.max(1e-6, hyp(q.x - p.x, q.y - p.y));
+  const V = maxSpeed(p), A = RUCKPICK.acc, away = Math.max(0, -(p.vx*(q.x - p.x) + p.vy*(q.y - p.y))/to);
+  const D = q.len + away*away/(2*A), run = D <= V*V/(2*A) ? Math.sqrt(2*D/A) : V/A + (D - V*V/(2*A))/V;
+  return away/A + run;
+}
+function ruckBehind(team, x, y, m, but) {                  // the nearest free man to the mark at or behind the ruck line (other than `but`), or null
+  const d = dirOf(team);
+  return nearestOf(M.players.filter(q => q !== but && q.team === team && q.down <= 0 && !q.bind && (q.x - x)*d <= 0), m.x, m.y);
+}
+function ruckWait(s, dt) {                                 // RUCKPICK: the ball held at the base until a human side's picker is in the box (released on the step he gets there), for `wait` s at most, or `waitLast` when nobody but him is at or behind the ruck line to take it. The defence holds its ruck line meanwhile, and the tackler stays down
+  const p = s.picker;
+  if (!RUCKPICK.on || s.kind !== 'ruck' || !p || p.team !== s.team || !isHuman(s.team) || !onFeet(p)) return false;
+  const B = ruckBox(s.team, s.x, s.y), e = ruckBoxNear(p, B);
+  if (e.out <= RUCKPICK.in) return false;
+  if (e.out <= RUCKPICK.put && s.from && e.out >= ruckBoxNear(s.from, B).out && hyp(e.x - s.from.x, e.y - s.from.y) <= RUCKPICK.put) return false;   // a shove nudged him out: near enough that releaseTo puts him back on its edge (ruckBoxPut, the same `put` test), and this step took him no nearer, so he is not running in (a man who is gets in on his own a step or two later, with no put). Not waited on, as the shove went on pushing him out while the ball was held for him. His step and the put together move him `put` at most
+  const w = s.waited || 0;
+  if (w >= RUCKPICK.wait - 1e-9 && (w >= RUCKPICK.waitLast - 1e-9 || ruckBehind(s.team, s.x, s.y, playFrom(s.team, s.x, s.y, 'ruck'), p))) return false;
+  s.waited = (s.waited || 0) + dt;
+  const q = s.tackler;                                     // his clocks stand still while it waits, so he is still down and retiring when it comes out, as the ruck had him
+  if (q) for (const k of ['down', 'tcd', 'offside']) if (q[k] > 0) q[k] += dt;
+  return true;
+}
+function ruckBoxPut(p, B) {                                // a picker a push moved just out of the box back on its edge: a collision-sized correction only, never a jump
+  const q = ruckBoxNear(p, B);
+  if (q.out > RUCKPICK.put) return false;
+  p.x = q.x; p.y = q.y; return true;
+}
+function ruckBoxHold(p, B, dt) {                           // the stick's velocity cut at the box's edge, so he slides along it rather than stopping dead
+  const a = (p.x - B.x)*B.d;
+  const va = p.vx*B.d, vaMax = Math.max(0, (B.a1 - a)/dt);
+  if (va > vaMax) p.vx = B.d*vaMax;
+  const vyMax = Math.max(0, (B.y1 - p.y)/dt), vyMin = -Math.max(0, (p.y - B.y0)/dt);
+  if (p.vy > vyMax) p.vy = vyMax; else if (p.vy < vyMin) p.vy = vyMin;
+}
 function pressure(p) { let m = 99; for (const q of M.players) if (q.team !== p.team && q.down <= 0) m = Math.min(m, dist(p,q)); return m; }
 function ourBall(t) {                                      // side t has it: held by its man, or its pass in the air
   const b = M.ball;
@@ -2353,7 +2418,7 @@ function startSet(o) {
   if (o.kind === 'ruck') {
     // the ring leaves the tackled man for the teammate who will pick the ball up, so the stick can place him while the ruck is still down. A CPU side is left alone
     if (isHuman(o.team)) {
-      const m = playFrom(o.team, o.x, o.y, 'ruck'), p = nearestFree(o.team, m.x, m.y);
+      const m = playFrom(o.team, o.x, o.y, 'ruck'), p = RUCKPICK.on ? ruckPicker(o.team, o, m) : nearestFree(o.team, m.x, m.y);   // RUCKPICK: from behind the ball
       if (p) { o.picker = p; setCtrl(o.team, p); }
     }
     return;
@@ -2427,8 +2492,13 @@ function lineout(team, x, y, reason) {
 function releaseTo(team, x, y, kind, who) {
   const d = dirOf(team);
   const m = playFrom(team, x, y, kind);
-  const pinned = kind === 'ruck' && who && who.team === team && onFeet(who) ? who : null;   // the man the stick was placing picks it up, wherever he was put; a turnover never asks for him
-  const p = pinned || nearestFree(team, m.x, m.y) || M.players.find(q => q.team === team);
+  let pinned = kind === 'ruck' && who && who.team === team && onFeet(who) ? who : null;   // the man the stick was placing picks it up, wherever he was put; a turnover never asks for him
+  let base = null;
+  if (kind === 'ruck' && RUCKPICK.on && isHuman(team) && !(pinned && ruckBoxPut(pinned, ruckBox(team, x, y)))) {   // RUCKPICK: a push moved him just out of the box, so he takes it on its edge
+    pinned = null;                                         // further out (he never got there, even with the ball held for him), or no picker on his feet: the nearest free man to the mark at or behind the ruck line has it where he stands
+    base = ruckBehind(team, x, y, m);
+  }
+  const p = pinned || base || nearestFree(team, m.x, m.y) || M.players.find(q => q.team === team);
   if (kind === 'scrum' || kind === 'lineout') {   // the scrum-half or catcher takes it at the mark, whoever won it
     p.x = clamp(m.x, 1, 119); p.y = clamp(m.y, 2, 68); p.vx = p.vy = 0; p.fx = d; p.fy = 0;
   }
@@ -2980,6 +3050,8 @@ function tackleChecks(c) {
 }
 function collide() {                                       // standing men push apart; a man on the ground, or one bound in a tackle, is stepped round; team-mates stop jostling
   const P = M.players, R = 1.25, RD = CONTACT.downR;
+  const pk = RUCKPICK.on && M.phase === 'set' && M.set && M.set.kind === 'ruck' ? M.set.picker : null;   // RUCKPICK: the ruck's picker runs through his own standing team-mates to its base (they stood in his way, and he got there late)
+  const pkIn = !!pk && RUCKPICK.shield && onFeet(pk);   // RUCKPICK: and an opponent's shove never moves him, in the box or on his way into it (a man running across to his ruck spot shoved him out, or kept him out, until the ball went to another man, 1.10.1)
   for (let i = 0; i < P.length; i++) {
     const a = P[i];
     for (let j = i+1; j < P.length; j++) {
@@ -2987,11 +3059,13 @@ function collide() {                                       // standing men push 
       if (a.bind && a.bind === c.bind) continue;             // the men in one bind hold each other: bindMove owns them
       const ad = a.down > 0 || !!a.bind, cd = c.down > 0 || !!c.bind;   // a bound man stays put like a man on the ground, and everyone else steps round him
       if (ad && cd) continue;
+      if (pk && (a === pk || c === pk) && a.team === c.team && !ad && !cd) continue;
       const dx = c.x-a.x, dy = c.y-a.y, d2 = dx*dx + dy*dy, r = (ad || cd) ? RD : R;
       if (d2 >= r*r) continue;
       const d = Math.sqrt(d2), o = Math.min(r - d, (ad || cd) ? 0.2 : 0.4), nx = d > 1e-3 ? dx/d : 1, ny = d > 1e-3 ? dy/d : 0;   // eased out by at most 0.2m a step round a man on the ground or bound (one getting up inside a crowd is not shoved), 0.4m between standing men so they never sink into each other; an exact overlap is parted along the touchline axis rather than left
       if (ad) { c.x += nx*o; c.y += ny*o; }
       else if (cd) { a.x -= nx*o; a.y -= ny*o; }
+      else if (pkIn && a.team !== c.team && (a === pk || c === pk)) { if (a === pk) { c.x += nx*o; c.y += ny*o; } else { a.x -= nx*o; a.y -= ny*o; } }   // RUCKPICK: the ruck's picker is not shoved by a man running past the base; the opponent steps round him
       else {
         a.x -= nx*o/2; a.y -= ny*o/2; c.x += nx*o/2; c.y += ny*o/2;
         const rv = (c.vx - a.vx)*nx + (c.vy - a.vy)*ny;
@@ -4193,6 +4267,25 @@ const DOM_TURN = [0.25, 0.35], DOM_RUCK = 1.6, LINE_SPEED = 2.5;
    CONTACT='{"bind":0.3}' SPRINT='{"mul":[1.25,1.25,1.2]}' node tools/bot.mjs tries values without an edit. Arrays are by level (Easy, Normal, Hard). */
 const CONTACT = { bind:0.25, side:1.10, contact:[0.58,0.42,0.42], dive:[0.66,0.50], ankle:0.55, diveDown:0.75, brokenDown:0.5, stumble:[0.15,0.9], slide:[0.5,0.95], downR:0.95, second:{ r:1.3, toDom:0.35, softToWrap:0.35 }, dom:{ base:0.14, pow:0.04, front:0.03, dive:0.08, sprint:0.10, cpu:[-0.03,0,0.03] }, soft:{ base:0.22, behind:0.25, fast:0.08, pow:0.04 }, fend:{ pow:1, margin:0.35 }, trip:{ p:0.4, t:0.5, mul:0.5 }, jolt:{ dom:0.09, wrap:0.02, soft:0.01, fwd:0.55 }, off:{ soft:0.85, wrap:0.70, range:9, cpu:0.10, hold:0.5, knock:0.55 } };
 const RUCK = { t:{ quick:0.7, normal:1.0, slow:1.5 }, quickLead:0.3, attHead:0.35, gate:3.5, retire:0.6, flatBase:0.11, pen:0.045, wf:{ r:3, t:0.7, mul:0.5 } };
+/* The ruck picker (1.10.1): a human side's ruck moves the ring to the man who will pick the ball up, and the stick places him while the
+   ruck is down. He is the nearest free man at or behind the ruck line who can reach its base (the box below, no deeper than `deep` m
+   behind the line) at full pace (`acc`, braking first from any pace away from it, on the route he runs) with `spare` s to go before
+   the ball comes out; failing that, the nearest behind it who can with the ball held for him (`wait`); failing that, whoever of all
+   gets there soonest. The box is behind the ball: from `ahead` m behind the ruck line back, within `wide` m either side of the mark,
+   and `touch` m in from either touchline. Inside it the stick moves him and he slides along its edge; outside it (by more than `in` m)
+   he runs into it at full pace whatever the stick says, held or let go, aimed `inset` m inside its edge, through his own standing
+   team-mates, and round the men on the ground (out past `round` m aside, aimed `inset` m beyond it, no more than `front` m in
+   front) when he starts in front of the ball beside the ruck. An opponent's shove never moves him, in the box or on his way in (`shield`: the opponent steps round
+   him). When the ruck's time is up and he is still outside, the ball waits at the base for him (released on the step he gets in)
+   for `wait` s at most, or `waitLast` s when nobody else is at or behind the ruck line; the defence holds its ruck line and the
+   tackler stays down meanwhile. A man a shove has just nudged out, within `put` and not running in, is not waited on: he takes it
+   on the box's edge at once (the wait let the same man shove him on out of reach). So the man you control is the man who takes it.
+   releaseTo puts him back on the box's edge if a push moved him out by `put` m or less, a collision's size; further out, he is not
+   pinned, and the nearest free man to the mark at or behind the ruck line (any man only if none is) takes it where he stands, so
+   the ball never jumps a man across the pitch. A thumb still pushing forward from the run used to drive him 4 to 11m through the
+   gap the defence leaves, and the ball appeared on him there. CPU sides never have a picker, a wait or a shield.
+   RUCKPICK='{"on":false}' is 8fb3bc0 (1.10) draw for draw. */
+const RUCKPICK = { on:true, ahead:0.5, wide:5, touch:0.5, deep:4, in:0.02, acc:20, spare:0.1, put:0.35, wait:1.0, waitLast:3.0, round:2.4, front:2.0, inset:0.15, shield:true };
 const SPRINT = { mul:[1.25,1.25,1.20], mulBall:[1.06,1.06,1.05], secs:2.0, ballDrain:1.5, refill:[7,10,10], floor:0.2, fade:0.3, pick:4, cpu:{ chase:[0.1,0.12,0.2], chaseLast:[0,0,0], carry:[0,0.05,0.3], carryLast:[0,0,0], lane:15, min:2.5, max:12, space:6, keep:2.5, think:0.25 } };
 const INSTANT = [0.85, 0.70, 0.55];
 // Key Pass: how often the defender drifts onto the runner (Dummy is right) and, when he doesn't, how often he fakes a drift first
@@ -5672,12 +5765,16 @@ function moveAll(dt) {
     if (p.down > 0) { p.down -= dt; steer(p, 0, 0, 16, dt); continue; }
     if (ua[p.team] && ringed(p)) {
       const inp = inputOf(p.team);
+      const B = RUCKPICK.on && M.phase === 'set' && M.set && M.set.kind === 'ruck' && M.set.picker === p ? ruckBox(M.set.team, M.set.x, M.set.y) : null;
+      if (B) { const q = ruckRoute(p, B); if (q.out > RUCKPICK.in) { seek(p, q.x, q.y, maxSpeed(p), RUCKPICK.acc, dt, true); continue; } }   // RUCKPICK: out of the box (he started wide or ahead, or was pushed), he runs into it at full pace whatever the stick says, held or let go, round the ruck when he is in front of it
       if (M.phase === 'set' && M.set && M.set.kind === 'ruck' && M.set.picker === p && inp.world().mag < 1e-6) {
         const t = T.get(p);                                     // the stick let go: he still runs onto the ball, as he did before the ring moved
         if (t) { seek(p, t.x, t.y, t.s, t.a || 13, dt, t.pursue); continue; }
       }
       if (M.kids && kidsChase(p, inp, dt)) continue;           // Kids: let go of the stick and he chases on his own
-      userMove(p, dt, inp); continue;                          // any deflection places him until the ball is out
+      userMove(p, dt, inp);                                    // any deflection places him until the ball is out
+      if (B) ruckBoxHold(p, B, dt);                            // RUCKPICK: only inside the box behind the ball
+      continue;
     }
     if (M.phase === 'play' && b.state === 'held' && b.carrier === p) { aiCarrier(p, dt); continue; }
     const t = T.get(p);
@@ -5746,6 +5843,7 @@ function matchUpdate(dt) {
   if (M.phase === 'cut') return;                           // a drop goal's close-up opened on this step: the world is frozen from here
   contactGuard(); sprintTick(dt);
   for (const s of M.side) { if (s.ctrl !== s.ctrlPrev) { s.ctrlPrev = s.ctrl; s.ctrlT = 0; } else s.ctrlT += dt; }
+  if (RUCKPICK.on && M.phase === 'set' && M.set.kind === 'ruck' && M.set.picker) M.set.from = { x:M.set.picker.x, y:M.set.picker.y };   // RUCKPICK: where the picker started this step (ruckWait)
   moveAll(dt);
   if (M.phase === 'play') {
     if (b.state === 'held') {
@@ -5757,7 +5855,7 @@ function matchUpdate(dt) {
     if (M.phase === 'play' && M.hooter && !M.demo && M.clock > periodLen() + 45) endHalf();
   } else if (M.phase === 'set') {
     M.set.t -= dt;
-    if (M.set.t <= 0) { const s = M.set; M.set = null; M.phase = 'play'; s.then(s); }
+    if (M.set.t <= 0 && !ruckWait(M.set, dt)) { const s = M.set; M.set = null; M.phase = 'play'; s.then(s); }   // RUCKPICK: a human side's ball waits at the base for its picker
   } else if (M.phase === 'goal') updateGoal(dt);
   chaseTick(dt);                                           // the kick chase's clock and its early end (src/chase.js)
   pressTick(dt);                                           // PRESSURE's resets and marks, and a knocked-on ball's beat (src/contact.js)
@@ -20099,7 +20197,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     setTwo, two:() => two, seatScheme, twoClaim, twoRelease, twoSwap, resetSeats, pads:() => PADS, padsOn:() => padsOn, padConnected, padGone, releaseAll, setDev, lastDev:() => lastDev, focus:() => focusEl, pause, paused:() => !!(M && M.paused),
     openJoin, renderJoin, seatDev, legendHtml, seatKey, swapPlayers, useKeyboard, navLog, navLayer, twoSel:() => twoSel, series:() => series, startTwo, openTeams, renderTeams, renderHub, pickTeam, pickMode:() => pickMode, showBreak, breakKind:() => breakKind, navOnly:() => navOnly, navOwner, cueOf, cutCues, DUEL_LOCK, TWO, SCRUM_LEVEL, LINE_LEVEL, SCRUM_DOM, SCRUM_HEAD, SCRUM_TIE, scrumAhead, scrumBar, scrumShown, goHome, exitMatch, setDesk, isDesk, CONFIRM,
     DUEL_SLOW, TDUEL, cutRate, CUT_IN, hintFor, hintShown:() => hintShown, hintOpen:() => HO, hintsOn, setHints, syncHints, hintDev, chipHtml, keycapsFor, renderHintSwitches, tutCards, tutHtml, tutStart, tutAdvance, tutPlay, tut:() => (M ? M.tut : null), tutSeen, tutMark, tutReset, tutMoment, tutSeatOf, TUT_IDS, OPEN_HINTS, placeStick, platesFloor, safeInsets, stickRest, tagBox, nearestAct, releaseTouch, phoneUpright, coachTick, coachClear, coachLast:() => coachLast, COACH_IDS, COACH_LINE },
-  contact:{ matchMild, CONTACT, RUCK, SPRINT, commitTackle, resolveContact, contactStep, releaseBind, joinTackle, tackle, resolveRuck, tackleChecks, userTackle, canDive, canOffload, offload, looseInContact, collide, moveAll, wrongFoot, tackleChance,
+  contact:{ matchMild, CONTACT, RUCK, RUCKPICK, startSet, playFrom, SPRINT, commitTackle, resolveContact, contactStep, releaseBind, joinTackle, tackle, resolveRuck, tackleChecks, userTackle, canDive, canOffload, offload, looseInContact, collide, moveAll, wrongFoot, tackleChance,
     maxSpeed, sprintLevel, sprintable, sprintPress, sprintPick, sprintOn, sprintTick, bestChaser, cpuSprintWant, cleanThrough, ahead, gapAhead, offloadTarget, switchTarget, switchUseful, switchPlayer, computeTargets, commitPoint, COVER, drawPos, tag, isHuman, ctrlOf, levelOf,
     LONG, pickReceiver, pickLong, passAim, shownPass, passOrBlock, doPass, blockSpec, RUNON, PASS_FLIGHT, SUPPORT, openShoulder, shoulderPoint, holdShoulder, runOn, leadPass, runOnTarget, passPace, passSpeed, handleUser, userStep,
     MOVES, gestureStep, sideStep, dummyPass, pressure },

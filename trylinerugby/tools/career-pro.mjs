@@ -2,7 +2,7 @@
 // Call for Ball, Team Spirit's pull on who gets the ball, set pieces, the screens, and Pro Mode matches played to full time.
 // node tools/career-pro.mjs   Exits 1 on any failure.
 process.env.SEED ??= '29';
-const { T, reseed, bot, duelBot, kickBot, dropBot, scrumBot, lineBot, offRun, LOCAL_CHILD, spreadProof } = await import('./harness.mjs');
+const { T, reseed, bot, duelBot, kickBot, dropBot, scrumBot, lineBot, offRun, LOCAL_CHILD, spreadProof, ruckpickProof } = await import('./harness.mjs');
 const { readGameSource } = await import('./source.mjs');
 const C = T.career, P = T.careerPro, X = T.teams, D = T.debug, K = T.contact, $ = id => document.getElementById(id);
 let passed = 0, failed = 0;
@@ -39,7 +39,8 @@ const ready = () => { settings.played = 99; settings.diff = 1; settings.kids = f
 // Farnham's year draws Merton, now 41 (was 40), into the first Whole Team match. With SPREAD_OFF (Wandsworth, Guildfordians, Egham and
 // Merton back at 40, every side as b8c634e: tools/ratings.mjs section 2b) this build gives BEFORE_SPREAD, b8c634e's pins, exactly (checked
 // first, in a child: spreadProof). TEAM_MINIS (its sides one off every ability, so Merton's 1.5 Pace is 1 there, as before) and NON_CAREER did not move.
-const NON_CAREER = '1mhz589 d8ah04 173l2tk', TEAM = '8vl48x 1lhkmym', TEAM_MINIS = 'dn49dr 1pc2tid';
+const NON_CAREER = '1mhz589 ejchcg 17to17z', TEAM = '1mitt4i idf4wr', TEAM_MINIS = 'gc2xn8 1gln4b1';   // re-pinned at the ruck picker (1.10.1, RUCKPICK, src/duels.js), and again at its fourth cut (19 Nov: the picker shielded from opponents' shoves while the ruck is down, and the ball no longer held for a man a shove nudged just out of the box): the bot plays your side's rucks in all three, so all three moved but the simulated pair (AI v AI); with RUCKPICK='{"on":false}' this build gives BEFORE_RUCKPICK, 8fb3bc0's pins, exactly (checked first, in a child: ruckpickProof)
+const BEFORE_RUCKPICK = ['1mhz589 d8ah04 173l2tk', '8vl48x 1lhkmym', 'dn49dr 1pc2tid'];   // NON_CAREER, TEAM and TEAM_MINIS at 8fb3bc0 (1.10)
 const BEFORE_SPREAD = ['1mhz589 d8ah04 173l2tk', '1ei1d0o 1lhkmym', 'dn49dr 1pc2tid'];   // NON_CAREER, TEAM and TEAM_MINIS at b8c634e (1.9.2), Counties 5 all 40
 const BEFORE_RERATE = ['1mhz589 p83t0p 9cdfje', 'arjzuq s968gv', 'dn49dr 1pc2tid'];   // NON_CAREER, TEAM and TEAM_MINIS at 8089294, the county clubs on at their first ratings
 const NON_CAREER_16 = '1mhz589 p83t0p 9cdfje';   // NON_CAREER at 1.6 (b9fa00d), LOCAL off, and at 8089294
@@ -98,6 +99,7 @@ if (!LOCAL_ON) { const CL = T.calls && T.calls.CALLS, CS = T.chase && T.chase.CH
   if (LOCAL_ON) { const off = await offRun(new URL(import.meta.url)), want = [NON_CAREER_16, ...BEFORE_LOCAL].join(' / ');
     ok(!off.fails.length && off.last === want, `with the county clubs off (LOCAL), as 1.6 (b9fa00d), and every older pin as before (${off.last}, pinned ${want}${off.fails.length ? '; ' + off.fails.join('; ') : ''})`); }
   await spreadProof(new URL(import.meta.url), BEFORE_SPREAD.join(' / '), ok);   // Counties 5 back at 40: b8c634e's pins
+  if (RERATE) await ruckpickProof(new URL(import.meta.url), BEFORE_RUCKPICK.join(' / '), ok);   // the ruck picker as 1.10: 8fb3bc0's pins
   if (RERATE) { const r = await offRun(new URL(import.meta.url), { LOCAL:'{"rerate":false}' }), want = BEFORE_RERATE.join(' / ');
     ok(!r.fails.length && r.last === want, `with the rerating off (LOCAL rerate), as 8089294 (${r.last}, pinned ${want}${r.fails.length ? '; ' + r.fails.join('; ') : ''})`); }
   if (LOCAL_ON && T.local.LOCAL.view) { const v = await offRun(new URL(import.meta.url), { LOCAL:'{"view":false,"rerate":false}' }), want = [NON_CAREER_16, ...BEFORE_VIEW].join(' / ');   // 7c864c2 predates the rerating

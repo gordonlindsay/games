@@ -3,7 +3,7 @@
 // cup's knockouts. node tools/cups.mjs   Exits 1 on any failure.
 // GAME=/path/to/index.html CUPS_PRINT=1 node tools/cups.mjs prints section 0's fingerprint for that build and stops: how BASE was pinned.
 process.env.SEED ??= '41';
-const { T, reseed, bot, LOCAL_ON, RERATE, LOCAL_CHILD, rerateProofs } = await import('./harness.mjs');
+const { T, reseed, bot, LOCAL_ON, RERATE, LOCAL_CHILD, rerateProofs, ruckpickProof } = await import('./harness.mjs');
 const fs = await import('node:fs');
 const { resultsServe } = await import('./results-serve.mjs');
 const X = T.teams, D = T.debug, $ = id => document.getElementById(id);
@@ -20,7 +20,8 @@ const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Ma
    Farnham 58 and Haslemere 43, a step down, so the matches they play here move; the simulated pair and the demo do not. With LOCAL off
    (1.6) and with the rerating off (8089294) this build gives BEFORE_LOCAL, 1.6's pin, exactly, and the older pins below hold with LOCAL
    off as they did (each checked first, in a child: rerateProofs). */
-const BASE = '1mhz589 1eeqzm9 1tswp5k t3hhtc 137ioi3';
+const BASE = '1mhz589 pll2l 1tce76z 15symme 137ioi3';   // re-pinned at the ruck picker (1.10.1, RUCKPICK, src/duels.js), and again at its fourth cut (19 Nov: the picker shielded from opponents' shoves while the ruck is down, and the ball no longer held for a man a shove nudged just out of the box): the bot plays your side's rucks in the Quick Match, its Golden Try and the championship match, so those three moved; AI v AI and the demo did not. With RUCKPICK='{"on":false}' this build gives BEFORE_RUCKPICK, 8fb3bc0's pin, exactly (checked first, in a child: ruckpickProof)
+const BEFORE_RUCKPICK = '1mhz589 1eeqzm9 1tswp5k t3hhtc 137ioi3';   // 8fb3bc0 (1.10)
 const BEFORE_LOCAL = '1mhz589 wcn6wg 7d9t9f 13pm2gf 137ioi3';   // 1.6 (b9fa00d), LOCAL off, and 8089294   // 1.6 (2026-11-14): the possession calls and the interception rules (src/calls.js) and the kick chase (src/chase.js) together, as the game ships, both acting everywhere on purpose; with CALLS='{"on":false}' CHASE='{"on":false}' this build gives BEFORE_CALLS_CHASE, b4a25d5's pin, exactly; with the chase off alone, WITH_CALLS; with the calls off alone, WITH_CHASE (each checked first, below)
 const WITH_CALLS = 'lngm86 r11vtt 7d9t9f 13pm2gf 137ioi3';   // the calls on and the chase off, wt/calls' pin (a032b3a): re-pinned for the possession calls and the interception rules (src/calls.js, 2026-11-13), which act everywhere on purpose (nobody intercepts out of the passer's hands, nobody down, retiring or offside plays the ball, and the calls count their tags)
 const WITH_CHASE = '1c3imom t6ab7n zhonr6 i1wj0v b5g5ir';   // the chase on and the calls off, wt/chase's pin (fc90ec0): re-pinned for the kick chase (src/chase.js, 2026-11-13), which acts on every open-play kick on purpose, and again the same day for its react 0 (pace alone, the owner's choice: CHASE='{"react":0.2}' gives 98e11c8's 1s0b74m t6ab7n 1o5f4ys i1wj0v b5g5ir)
@@ -59,6 +60,7 @@ function fingerprint() {
   const now = fingerprint();
   if (process.env.CUPS_PRINT || LOCAL_CHILD) { console.log(now); process.exit(failed ? 1 : 0); }   // the LOCAL children (rerateProofs) print theirs
   if (LOCAL_ON) await rerateProofs(new URL(import.meta.url), BEFORE_LOCAL, ok);
+  if (RERATE) await ruckpickProof(new URL(import.meta.url), BEFORE_RUCKPICK, ok);
   const pin = RERATE ? BASE : BEFORE_LOCAL;
   ok(now === pin, `AI v AI, a Quick Match (its Golden Try included), a championship match and the demo play exactly as before the cups (seeded fingerprint ${now}, pinned ${pin})`);
 }
