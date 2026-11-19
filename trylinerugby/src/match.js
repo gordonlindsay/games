@@ -171,17 +171,18 @@ function ruckBoxNear(p, B) {                               // the box's nearest 
   const a = (p.x - B.x)*B.d, a2 = clamp(a, B.a0, B.a1), y2 = clamp(p.y, B.y0, B.y1);
   return { x:B.x + B.d*a2, y:y2, out:hyp(a - a2, p.y - y2) };
 }
-function ruckRoute(p, B) {                                 // where he runs to get into the box, and how far it is: its nearest point; or, in front of the ball (the ruck line) and within `round` m of the mark aside, first to `round` m aside, no more than `front` m in front, so he goes round the men on the ground (the tackled man and the tackler) rather than into them
+function ruckRoute(p, B) {                                 // where he runs to get into the box, and how far it is: its nearest point; or, in front of the ball (the ruck line) and within `round` m of the mark aside, first out past `round` m aside, no more than `front` m in front, so he goes round the men on the ground (the tackled man and the tackler) rather than into them
   const q = ruckBoxNear(p, B);
   if (q.out <= 0) return { ...q, len:0 };
-  const a = (p.x - B.x)*B.d, dy = p.y - B.y, R = RUCKPICK.round;
+  const a = (p.x - B.x)*B.d, dy = p.y - B.y, R = RUCKPICK.round, I = RUCKPICK.inset;
   if (a <= 0 || Math.abs(dy) >= R) {                       // aimed `inset` m inside the edge, so he crosses it rather than pulling up short of it
-    const I = RUCKPICK.inset, a2 = clamp(a, B.a0 + I, B.a1 - I), y2 = clamp(p.y, Math.min(B.y0 + I, B.y), Math.max(B.y1 - I, B.y));
+    const a2 = clamp(a, B.a0 + I, B.a1 - I), y2 = clamp(p.y, Math.min(B.y0 + I, B.y), Math.max(B.y1 - I, B.y));
     return { x:B.x + B.d*a2, y:y2, out:q.out, len:q.out };
   }
+  const W = R + I;                                         // the waypoint `inset` m past `round` aside, as the box's is inside its edge: seek stops dead within 0.05m of its target, so aimed at `round` itself he could stand still just short of it and never turn into the box (1.10.1's second to fourth cuts, once in about 3,000 matches)
   let side = dy >= 0 ? 1 : -1;
-  if (B.y + side*R > 70 - RUCKPICK.touch || B.y + side*R < RUCKPICK.touch) side = -side;   // never round the touchline side
-  const wa = Math.min(a, RUCKPICK.front), wy = B.y + side*R;
+  if (B.y + side*W > 70 - RUCKPICK.touch || B.y + side*W < RUCKPICK.touch) side = -side;   // never round the touchline side
+  const wa = Math.min(a, RUCKPICK.front), wy = B.y + side*W;
   return { x:B.x + B.d*wa, y:wy, out:q.out, len:hyp(a - wa, p.y - wy) + (wa - B.a1) };
 }
 function ruckReach(p, B) {                                 // the seconds he needs to reach the box at full pace (seek's acceleration) on the route he runs (ruckRoute), braking first from any pace away from it

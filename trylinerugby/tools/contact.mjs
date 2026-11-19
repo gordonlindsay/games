@@ -428,6 +428,30 @@ begin('ruck control');
     return null;
   })();
   ok(round && round.carrier && round.ring && round.past <= -RP.ahead + 1e-9 && round.aside <= RP.wide + 1e-9 && round.jump <= STRIDE && round.waited <= RP.wait - 0.2, `a picker 1.4m in front of the ruck line beside it, stick let go: he goes round it and takes the ball in the box (${round ? round.past.toFixed(2) : '-'}m past the line, ${round ? round.aside.toFixed(2) : '-'}m aside, after a ${round ? round.waited.toFixed(2) : '-'}s wait), the ring still on him`);
+  // at rest just short of the round waypoint: 1.10.1's second to fourth cuts aimed him at `round` m aside, and seek stops dead within 0.05m of its
+  // target, so a man standing 0.03m short of it never got to `round` aside, the test that turns him back into the box. He stood there,
+  // 0.70m out, through the ruck and the whole wait, and the ball went to a team-mate behind the line, the ring with it (6.47m away, once in
+  // about 3,000 matches with the stick held forward). Now the waypoint is `inset` m past `round`, so he crosses it before seek pulls up.
+  // Staged twice: beside the ruck (along 0.2m) and at the `front` clamp (along front + 0.02m, aimed at front), both at rest, no stick
+  const stall = (along, short) => {
+    for (let i = 0; i < 12; i++) {
+      fresh(1); noJolt(); RUCK.pen = 0; M().diff.turnover = -1;
+      const kk = bind(FRONT, 'ai', 'wrap'), m2 = kk.own[1]; park(kk, m2);
+      if (!toRuck()) continue;
+      const s = M().set, d2 = dirOf(s.team), side = s.y < 35 ? 1 : -1;
+      m2.x = s.x + d2*along; m2.y = s.y + side*(RP.round - short); m2.vx = m2.vy = 0; s.picker = m2; T.sides.setCtrl(s.team, m2); s.t = RUCK.t.normal;
+      let pre = null;
+      run(() => M().phase !== 'set', 400, () => { inp.jx = inp.jy = 0; if (M().phase === 'set') pre = { x:m2.x, y:m2.y }; });
+      const c = M().ball.state === 'held' ? M().ball.carrier : null;
+      if (!c || c.team !== s.team) continue;
+      return { carrier:c === m2, ring:M().ctrl === m2, past:(c.x - s.x)*d2, aside:Math.abs(c.y - s.y), jump:pre ? dist(c, pre) : 99, waited:s.waited || 0 };
+    }
+    return null;
+  };
+  for (const [along, short, where] of [[0.2, 0.03, 'beside the ruck, 0.2m in front of its line'], [RP.front + 0.02, 0.02, `at the front clamp, ${RP.front + 0.02}m in front of its line`]]) {
+    const st = stall(along, short);
+    ok(st && st.carrier && st.ring && st.waited === 0 && st.past <= -RP.ahead + 1e-9 && st.aside <= RP.wide + 1e-9 && st.jump <= STRIDE, `a picker at rest ${short}m short of ${RP.round}m aside ${where}, stick let go: he reaches the box and takes the ball with no wait (${st ? st.waited.toFixed(2) : '-'}s) and no switch, ${st ? st.past.toFixed(2) : '-'}m past the line, ${st ? st.aside.toFixed(2) : '-'}m aside, the ring still on him`);
+  }
   // past the wait: a picker too far out for it, with a team-mate behind the ball, and the ball goes to that man where he stands, with no
   // jump. With nobody else behind the ball, it waits for the picker up to RUCKPICK.waitLast, so the ball never comes out past the line
   const far = mates => {

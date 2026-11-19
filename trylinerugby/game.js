@@ -2332,17 +2332,18 @@ function ruckBoxNear(p, B) {                               // the box's nearest 
   const a = (p.x - B.x)*B.d, a2 = clamp(a, B.a0, B.a1), y2 = clamp(p.y, B.y0, B.y1);
   return { x:B.x + B.d*a2, y:y2, out:hyp(a - a2, p.y - y2) };
 }
-function ruckRoute(p, B) {                                 // where he runs to get into the box, and how far it is: its nearest point; or, in front of the ball (the ruck line) and within `round` m of the mark aside, first to `round` m aside, no more than `front` m in front, so he goes round the men on the ground (the tackled man and the tackler) rather than into them
+function ruckRoute(p, B) {                                 // where he runs to get into the box, and how far it is: its nearest point; or, in front of the ball (the ruck line) and within `round` m of the mark aside, first out past `round` m aside, no more than `front` m in front, so he goes round the men on the ground (the tackled man and the tackler) rather than into them
   const q = ruckBoxNear(p, B);
   if (q.out <= 0) return { ...q, len:0 };
-  const a = (p.x - B.x)*B.d, dy = p.y - B.y, R = RUCKPICK.round;
+  const a = (p.x - B.x)*B.d, dy = p.y - B.y, R = RUCKPICK.round, I = RUCKPICK.inset;
   if (a <= 0 || Math.abs(dy) >= R) {                       // aimed `inset` m inside the edge, so he crosses it rather than pulling up short of it
-    const I = RUCKPICK.inset, a2 = clamp(a, B.a0 + I, B.a1 - I), y2 = clamp(p.y, Math.min(B.y0 + I, B.y), Math.max(B.y1 - I, B.y));
+    const a2 = clamp(a, B.a0 + I, B.a1 - I), y2 = clamp(p.y, Math.min(B.y0 + I, B.y), Math.max(B.y1 - I, B.y));
     return { x:B.x + B.d*a2, y:y2, out:q.out, len:q.out };
   }
+  const W = R + I;                                         // the waypoint `inset` m past `round` aside, as the box's is inside its edge: seek stops dead within 0.05m of its target, so aimed at `round` itself he could stand still just short of it and never turn into the box (1.10.1's second to fourth cuts, once in about 3,000 matches)
   let side = dy >= 0 ? 1 : -1;
-  if (B.y + side*R > 70 - RUCKPICK.touch || B.y + side*R < RUCKPICK.touch) side = -side;   // never round the touchline side
-  const wa = Math.min(a, RUCKPICK.front), wy = B.y + side*R;
+  if (B.y + side*W > 70 - RUCKPICK.touch || B.y + side*W < RUCKPICK.touch) side = -side;   // never round the touchline side
+  const wa = Math.min(a, RUCKPICK.front), wy = B.y + side*W;
   return { x:B.x + B.d*wa, y:wy, out:q.out, len:hyp(a - wa, p.y - wy) + (wa - B.a1) };
 }
 function ruckReach(p, B) {                                 // the seconds he needs to reach the box at full pace (seek's acceleration) on the route he runs (ruckRoute), braking first from any pace away from it
@@ -4273,8 +4274,8 @@ const RUCK = { t:{ quick:0.7, normal:1.0, slow:1.5 }, quickLead:0.3, attHead:0.3
    gets there soonest. The box is behind the ball: from `ahead` m behind the ruck line back, within `wide` m either side of the mark,
    and `touch` m in from either touchline. Inside it the stick moves him and he slides along its edge; outside it (by more than `in` m)
    he runs into it at full pace whatever the stick says, held or let go, aimed `inset` m inside its edge, through his own standing
-   team-mates, and round the men on the ground (out to `round` m aside, no more than `front` m in front) when he starts in front of
-   the ball beside the ruck. An opponent's shove never moves him, in the box or on his way in (`shield`: the opponent steps round
+   team-mates, and round the men on the ground (out past `round` m aside, aimed `inset` m beyond it, no more than `front` m in
+   front) when he starts in front of the ball beside the ruck. An opponent's shove never moves him, in the box or on his way in (`shield`: the opponent steps round
    him). When the ruck's time is up and he is still outside, the ball waits at the base for him (released on the step he gets in)
    for `wait` s at most, or `waitLast` s when nobody else is at or behind the ruck line; the defence holds its ruck line and the
    tackler stays down meanwhile. A man a shove has just nudged out, within `put` and not running in, is not waited on: he takes it
