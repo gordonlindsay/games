@@ -199,7 +199,9 @@ function ruckBehind(team, x, y, m, but) {                  // the nearest free m
 function ruckWait(s, dt) {                                 // RUCKPICK: the ball held at the base until a human side's picker is in the box (released on the step he gets there), for `wait` s at most, or `waitLast` when nobody but him is at or behind the ruck line to take it. The defence holds its ruck line meanwhile, and the tackler stays down
   const p = s.picker;
   if (!RUCKPICK.on || s.kind !== 'ruck' || !p || p.team !== s.team || !isHuman(s.team) || !onFeet(p)) return false;
-  if (ruckBoxNear(p, ruckBox(s.team, s.x, s.y)).out <= RUCKPICK.in) return false;
+  const B = ruckBox(s.team, s.x, s.y), e = ruckBoxNear(p, B);
+  if (e.out <= RUCKPICK.in) return false;
+  if (e.out <= RUCKPICK.put && s.from && e.out >= ruckBoxNear(s.from, B).out && hyp(e.x - s.from.x, e.y - s.from.y) <= RUCKPICK.put) return false;   // a shove nudged him out: near enough that releaseTo puts him back on its edge (ruckBoxPut, the same `put` test), and this step took him no nearer, so he is not running in (a man who is gets in on his own a step or two later, with no put). Not waited on, as the shove went on pushing him out while the ball was held for him. His step and the put together move him `put` at most
   const w = s.waited || 0;
   if (w >= RUCKPICK.wait - 1e-9 && (w >= RUCKPICK.waitLast - 1e-9 || ruckBehind(s.team, s.x, s.y, playFrom(s.team, s.x, s.y, 'ruck'), p))) return false;
   s.waited = (s.waited || 0) + dt;

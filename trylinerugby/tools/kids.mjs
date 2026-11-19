@@ -733,9 +733,11 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   // build gives BEFORE_LOCAL, 1.6's PIN, exactly, and the chain below holds with LOCAL off as it did (each in a child: rerateProofs)
   // Re-pinned at the ruck picker (1.10.1, RUCKPICK, src/duels.js: your side's ruck picker from behind the ball, kept in a box near its
   // base): Quick Match on Normal at 2, 4 and 6 minutes, where the bot plays your side's rucks, moved; Easy, Hard, Two Player, AI v AI and
-  // the demo did not. With RUCKPICK='{"on":false}' this build gives BEFORE_RUCKPICK, 8fb3bc0's PIN, exactly (in a child: ruckpickProof)
+  // the demo did not. With RUCKPICK='{"on":false}' this build gives BEFORE_RUCKPICK, 8fb3bc0's PIN, exactly (in a child: ruckpickProof).
+  // The same three moved again at its fourth cut (19 Nov: the picker shielded from opponents' shoves while the ruck is down, and the ball
+  // no longer held for a man a shove nudged just out of the box); the proof is unchanged
   const BEFORE_RUCKPICK = '1ckfie8 17jlh1u 7dpem6 1ojvcyi 1mx45p0 o24dg5 19781ts 1afo373';
-  const PIN = RERATE ? '1ckfie8 150zudz 7dpem6 4u2iw 15on8xf 1oe5cq 19781ts 1afo373' : 'ytai0c 7gbn71 16q2gdq kycu0e 1owh0p7 1db7d9g 19781ts 1afo373';
+  const PIN = RERATE ? '1ckfie8 1vnate0 7dpem6 p7gd6e xqxlz5 1oe5cq 19781ts 1afo373' : 'ytai0c 7gbn71 16q2gdq kycu0e 1owh0p7 1db7d9g 19781ts 1afo373';
   const BEFORE_LOCAL = 'ytai0c 7gbn71 16q2gdq kycu0e 1owh0p7 1db7d9g 19781ts 1afo373';
   const WITH_CALLS = 'ytai0c 1vfa9il 17vh7h5 1h583yb 1owh0p7 1db7d9g 19781ts 1afo373';
   const WITH_CHASE = '7wl1n0 kq1d2 1c0yntb 1cco652 1klviba 1db7d9g fs1jc3 1j6lmbf';

@@ -272,6 +272,7 @@ function tackleChecks(c) {
 function collide() {                                       // standing men push apart; a man on the ground, or one bound in a tackle, is stepped round; team-mates stop jostling
   const P = M.players, R = 1.25, RD = CONTACT.downR;
   const pk = RUCKPICK.on && M.phase === 'set' && M.set && M.set.kind === 'ruck' ? M.set.picker : null;   // RUCKPICK: the ruck's picker runs through his own standing team-mates to its base (they stood in his way, and he got there late)
+  const pkIn = !!pk && RUCKPICK.shield && onFeet(pk);   // RUCKPICK: and an opponent's shove never moves him, in the box or on his way into it (a man running across to his ruck spot shoved him out, or kept him out, until the ball went to another man, 1.10.1)
   for (let i = 0; i < P.length; i++) {
     const a = P[i];
     for (let j = i+1; j < P.length; j++) {
@@ -285,6 +286,7 @@ function collide() {                                       // standing men push 
       const d = Math.sqrt(d2), o = Math.min(r - d, (ad || cd) ? 0.2 : 0.4), nx = d > 1e-3 ? dx/d : 1, ny = d > 1e-3 ? dy/d : 0;   // eased out by at most 0.2m a step round a man on the ground or bound (one getting up inside a crowd is not shoved), 0.4m between standing men so they never sink into each other; an exact overlap is parted along the touchline axis rather than left
       if (ad) { c.x += nx*o; c.y += ny*o; }
       else if (cd) { a.x -= nx*o; a.y -= ny*o; }
+      else if (pkIn && a.team !== c.team && (a === pk || c === pk)) { if (a === pk) { c.x += nx*o; c.y += ny*o; } else { a.x -= nx*o; a.y -= ny*o; } }   // RUCKPICK: the ruck's picker is not shoved by a man running past the base; the opponent steps round him
       else {
         a.x -= nx*o/2; a.y -= ny*o/2; c.x += nx*o/2; c.y += ny*o/2;
         const rv = (c.vx - a.vx)*nx + (c.vy - a.vy)*ny;

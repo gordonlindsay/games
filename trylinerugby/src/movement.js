@@ -554,6 +554,7 @@ function matchUpdate(dt) {
   if (M.phase === 'cut') return;                           // a drop goal's close-up opened on this step: the world is frozen from here
   contactGuard(); sprintTick(dt);
   for (const s of M.side) { if (s.ctrl !== s.ctrlPrev) { s.ctrlPrev = s.ctrl; s.ctrlT = 0; } else s.ctrlT += dt; }
+  if (RUCKPICK.on && M.phase === 'set' && M.set.kind === 'ruck' && M.set.picker) M.set.from = { x:M.set.picker.x, y:M.set.picker.y };   // RUCKPICK: where the picker started this step (ruckWait)
   moveAll(dt);
   if (M.phase === 'play') {
     if (b.state === 'held') {

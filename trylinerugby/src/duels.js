@@ -34,14 +34,17 @@ const RUCK = { t:{ quick:0.7, normal:1.0, slow:1.5 }, quickLead:0.3, attHead:0.3
    and `touch` m in from either touchline. Inside it the stick moves him and he slides along its edge; outside it (by more than `in` m)
    he runs into it at full pace whatever the stick says, held or let go, aimed `inset` m inside its edge, through his own standing
    team-mates, and round the men on the ground (out to `round` m aside, no more than `front` m in front) when he starts in front of
-   the ball beside the ruck. When the ruck's time is up and he is still outside, the ball waits at the base for him (released on the
-   step he gets in) for `wait` s at most, or `waitLast` s when nobody else is at or behind the ruck line; the defence holds its ruck
-   line and the tackler stays down meanwhile. So the man you control is the man who takes it. releaseTo puts him back on the box's edge
-   if a push moved him out by `put` m or less, a collision's size; further out, he is not pinned, and the nearest free man to the mark
-   at or behind the ruck line (any man only if none is) takes it where he stands, so the ball never jumps a man across the pitch. A
-   thumb still pushing forward from the run used to drive him 4 to 11m through the gap the defence leaves, and the ball appeared on
-   him there. CPU sides never have a picker or a wait. RUCKPICK='{"on":false}' is 8fb3bc0 (1.10) draw for draw. */
-const RUCKPICK = { on:true, ahead:0.5, wide:5, touch:0.5, deep:4, in:0.02, acc:20, spare:0.1, put:0.35, wait:1.0, waitLast:3.0, round:2.4, front:2.0, inset:0.15 };
+   the ball beside the ruck. An opponent's shove never moves him, in the box or on his way in (`shield`: the opponent steps round
+   him). When the ruck's time is up and he is still outside, the ball waits at the base for him (released on the step he gets in)
+   for `wait` s at most, or `waitLast` s when nobody else is at or behind the ruck line; the defence holds its ruck line and the
+   tackler stays down meanwhile. A man a shove has just nudged out, within `put` and not running in, is not waited on: he takes it
+   on the box's edge at once (the wait let the same man shove him on out of reach). So the man you control is the man who takes it.
+   releaseTo puts him back on the box's edge if a push moved him out by `put` m or less, a collision's size; further out, he is not
+   pinned, and the nearest free man to the mark at or behind the ruck line (any man only if none is) takes it where he stands, so
+   the ball never jumps a man across the pitch. A thumb still pushing forward from the run used to drive him 4 to 11m through the
+   gap the defence leaves, and the ball appeared on him there. CPU sides never have a picker, a wait or a shield.
+   RUCKPICK='{"on":false}' is 8fb3bc0 (1.10) draw for draw. */
+const RUCKPICK = { on:true, ahead:0.5, wide:5, touch:0.5, deep:4, in:0.02, acc:20, spare:0.1, put:0.35, wait:1.0, waitLast:3.0, round:2.4, front:2.0, inset:0.15, shield:true };
 const SPRINT = { mul:[1.25,1.25,1.20], mulBall:[1.06,1.06,1.05], secs:2.0, ballDrain:1.5, refill:[7,10,10], floor:0.2, fade:0.3, pick:4, cpu:{ chase:[0.1,0.12,0.2], chaseLast:[0,0,0], carry:[0,0.05,0.3], carryLast:[0,0,0], lane:15, min:2.5, max:12, space:6, keep:2.5, think:0.25 } };
 const INSTANT = [0.85, 0.70, 0.55];
 // Key Pass: how often the defender drifts onto the runner (Dummy is right) and, when he doesn't, how often he fakes a drift first

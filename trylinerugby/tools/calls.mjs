@@ -150,7 +150,7 @@ if (!run) { /* imported */ }
    step down, play three of these matches, so the pins below move with it (R_). With LOCAL off (1.6) and with the rerating off (8089294)
    this build gives the pins as they were exactly (each in a child: rerateProofs). */
 const R_BASE = '7v2oz 1up177z rpz32y jn1hak 1nn3ygy 1645i86 1rrksv3 1v5mrfn tdeptr', R_ON = 'tm442c 1jf7qng gy0tge e2nt7f nplown 1a1o3mj 16vj9il 16e7lhf a4gdxz';
-const R_SHIPS = 'j2z3up 1jf7qng 19nem5j 1f4816h 1921rrc 1mhoecd wpvva3 qigsn6 1gu9v6y';   // re-pinned at the ruck picker (1.10.1, RUCKPICK, src/duels.js): the tool's match, Easy, Normal and Hard as played, Kids and Two Player, where your side's rucks have a picker, moved, and the count of draws with them; AI v AI and the demo did not. With RUCKPICK off this build gives R_SHIPS_RUCK, 8fb3bc0's pin, exactly (checked below); R_BASE, R_ON and the older pins are builds before it, so they are checked with it off
+const R_SHIPS = 'j2z3up 1jf7qng 19nem5j 349ji0 1921rrc 486cko wpvva3 qigsn6 1221rn8';   // re-pinned at the ruck picker (1.10.1, RUCKPICK, src/duels.js), and again at its fourth cut (19 Nov: the picker shielded from opponents' shoves while the ruck is down, and the ball no longer held for a man a shove nudged just out of the box): the tool's match, Easy, Normal and Hard as played, Kids and Two Player, where your side's rucks have a picker, moved, and the count of draws with them; AI v AI and the demo did not. With RUCKPICK off this build gives R_SHIPS_RUCK, 8fb3bc0's pin, exactly (checked below); R_BASE, R_ON and the older pins are builds before it, so they are checked with it off
 const R_SHIPS_RUCK = 'j2z3up 1jf7qng gy0tge e2nt7f 1ad2kpp 1a1o3mj 16vj9il 16e7lhf 1s0250p';   // 8fb3bc0 (1.10)
 begin('0 CALLS off is b4a25d5');
 {

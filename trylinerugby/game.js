@@ -2360,7 +2360,9 @@ function ruckBehind(team, x, y, m, but) {                  // the nearest free m
 function ruckWait(s, dt) {                                 // RUCKPICK: the ball held at the base until a human side's picker is in the box (released on the step he gets there), for `wait` s at most, or `waitLast` when nobody but him is at or behind the ruck line to take it. The defence holds its ruck line meanwhile, and the tackler stays down
   const p = s.picker;
   if (!RUCKPICK.on || s.kind !== 'ruck' || !p || p.team !== s.team || !isHuman(s.team) || !onFeet(p)) return false;
-  if (ruckBoxNear(p, ruckBox(s.team, s.x, s.y)).out <= RUCKPICK.in) return false;
+  const B = ruckBox(s.team, s.x, s.y), e = ruckBoxNear(p, B);
+  if (e.out <= RUCKPICK.in) return false;
+  if (e.out <= RUCKPICK.put && s.from && e.out >= ruckBoxNear(s.from, B).out && hyp(e.x - s.from.x, e.y - s.from.y) <= RUCKPICK.put) return false;   // a shove nudged him out: near enough that releaseTo puts him back on its edge (ruckBoxPut, the same `put` test), and this step took him no nearer, so he is not running in (a man who is gets in on his own a step or two later, with no put). Not waited on, as the shove went on pushing him out while the ball was held for him. His step and the put together move him `put` at most
   const w = s.waited || 0;
   if (w >= RUCKPICK.wait - 1e-9 && (w >= RUCKPICK.waitLast - 1e-9 || ruckBehind(s.team, s.x, s.y, playFrom(s.team, s.x, s.y, 'ruck'), p))) return false;
   s.waited = (s.waited || 0) + dt;
@@ -3048,6 +3050,7 @@ function tackleChecks(c) {
 function collide() {                                       // standing men push apart; a man on the ground, or one bound in a tackle, is stepped round; team-mates stop jostling
   const P = M.players, R = 1.25, RD = CONTACT.downR;
   const pk = RUCKPICK.on && M.phase === 'set' && M.set && M.set.kind === 'ruck' ? M.set.picker : null;   // RUCKPICK: the ruck's picker runs through his own standing team-mates to its base (they stood in his way, and he got there late)
+  const pkIn = !!pk && RUCKPICK.shield && onFeet(pk);   // RUCKPICK: and an opponent's shove never moves him, in the box or on his way into it (a man running across to his ruck spot shoved him out, or kept him out, until the ball went to another man, 1.10.1)
   for (let i = 0; i < P.length; i++) {
     const a = P[i];
     for (let j = i+1; j < P.length; j++) {
@@ -3061,6 +3064,7 @@ function collide() {                                       // standing men push 
       const d = Math.sqrt(d2), o = Math.min(r - d, (ad || cd) ? 0.2 : 0.4), nx = d > 1e-3 ? dx/d : 1, ny = d > 1e-3 ? dy/d : 0;   // eased out by at most 0.2m a step round a man on the ground or bound (one getting up inside a crowd is not shoved), 0.4m between standing men so they never sink into each other; an exact overlap is parted along the touchline axis rather than left
       if (ad) { c.x += nx*o; c.y += ny*o; }
       else if (cd) { a.x -= nx*o; a.y -= ny*o; }
+      else if (pkIn && a.team !== c.team && (a === pk || c === pk)) { if (a === pk) { c.x += nx*o; c.y += ny*o; } else { a.x -= nx*o; a.y -= ny*o; } }   // RUCKPICK: the ruck's picker is not shoved by a man running past the base; the opponent steps round him
       else {
         a.x -= nx*o/2; a.y -= ny*o/2; c.x += nx*o/2; c.y += ny*o/2;
         const rv = (c.vx - a.vx)*nx + (c.vy - a.vy)*ny;
@@ -4270,14 +4274,17 @@ const RUCK = { t:{ quick:0.7, normal:1.0, slow:1.5 }, quickLead:0.3, attHead:0.3
    and `touch` m in from either touchline. Inside it the stick moves him and he slides along its edge; outside it (by more than `in` m)
    he runs into it at full pace whatever the stick says, held or let go, aimed `inset` m inside its edge, through his own standing
    team-mates, and round the men on the ground (out to `round` m aside, no more than `front` m in front) when he starts in front of
-   the ball beside the ruck. When the ruck's time is up and he is still outside, the ball waits at the base for him (released on the
-   step he gets in) for `wait` s at most, or `waitLast` s when nobody else is at or behind the ruck line; the defence holds its ruck
-   line and the tackler stays down meanwhile. So the man you control is the man who takes it. releaseTo puts him back on the box's edge
-   if a push moved him out by `put` m or less, a collision's size; further out, he is not pinned, and the nearest free man to the mark
-   at or behind the ruck line (any man only if none is) takes it where he stands, so the ball never jumps a man across the pitch. A
-   thumb still pushing forward from the run used to drive him 4 to 11m through the gap the defence leaves, and the ball appeared on
-   him there. CPU sides never have a picker or a wait. RUCKPICK='{"on":false}' is 8fb3bc0 (1.10) draw for draw. */
-const RUCKPICK = { on:true, ahead:0.5, wide:5, touch:0.5, deep:4, in:0.02, acc:20, spare:0.1, put:0.35, wait:1.0, waitLast:3.0, round:2.4, front:2.0, inset:0.15 };
+   the ball beside the ruck. An opponent's shove never moves him, in the box or on his way in (`shield`: the opponent steps round
+   him). When the ruck's time is up and he is still outside, the ball waits at the base for him (released on the step he gets in)
+   for `wait` s at most, or `waitLast` s when nobody else is at or behind the ruck line; the defence holds its ruck line and the
+   tackler stays down meanwhile. A man a shove has just nudged out, within `put` and not running in, is not waited on: he takes it
+   on the box's edge at once (the wait let the same man shove him on out of reach). So the man you control is the man who takes it.
+   releaseTo puts him back on the box's edge if a push moved him out by `put` m or less, a collision's size; further out, he is not
+   pinned, and the nearest free man to the mark at or behind the ruck line (any man only if none is) takes it where he stands, so
+   the ball never jumps a man across the pitch. A thumb still pushing forward from the run used to drive him 4 to 11m through the
+   gap the defence leaves, and the ball appeared on him there. CPU sides never have a picker, a wait or a shield.
+   RUCKPICK='{"on":false}' is 8fb3bc0 (1.10) draw for draw. */
+const RUCKPICK = { on:true, ahead:0.5, wide:5, touch:0.5, deep:4, in:0.02, acc:20, spare:0.1, put:0.35, wait:1.0, waitLast:3.0, round:2.4, front:2.0, inset:0.15, shield:true };
 const SPRINT = { mul:[1.25,1.25,1.20], mulBall:[1.06,1.06,1.05], secs:2.0, ballDrain:1.5, refill:[7,10,10], floor:0.2, fade:0.3, pick:4, cpu:{ chase:[0.1,0.12,0.2], chaseLast:[0,0,0], carry:[0,0.05,0.3], carryLast:[0,0,0], lane:15, min:2.5, max:12, space:6, keep:2.5, think:0.25 } };
 const INSTANT = [0.85, 0.70, 0.55];
 // Key Pass: how often the defender drifts onto the runner (Dummy is right) and, when he doesn't, how often he fakes a drift first
@@ -5835,6 +5842,7 @@ function matchUpdate(dt) {
   if (M.phase === 'cut') return;                           // a drop goal's close-up opened on this step: the world is frozen from here
   contactGuard(); sprintTick(dt);
   for (const s of M.side) { if (s.ctrl !== s.ctrlPrev) { s.ctrlPrev = s.ctrl; s.ctrlT = 0; } else s.ctrlT += dt; }
+  if (RUCKPICK.on && M.phase === 'set' && M.set.kind === 'ruck' && M.set.picker) M.set.from = { x:M.set.picker.x, y:M.set.picker.y };   // RUCKPICK: where the picker started this step (ruckWait)
   moveAll(dt);
   if (M.phase === 'play') {
     if (b.state === 'held') {

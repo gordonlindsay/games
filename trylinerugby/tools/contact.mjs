@@ -453,6 +453,37 @@ begin('ruck control');
   ok(f1 && near(f1.waited, RP.wait, STEP + 1e-9) && f1.c === f1.mate && f1.past <= 1e-9 && f1.jump <= STRIDE, `a picker 26m wide, a team-mate behind the ball: the ball waits ${f1 ? f1.waited.toFixed(2) : '-'}s, then goes to that man where he stands (${f1 ? f1.past.toFixed(2) : '-'}m past the line, moved ${f1 ? f1.jump.toFixed(2) : '-'}m)`);
   const f0 = far(false);
   ok(f0 && f0.waited > RP.wait && f0.waited <= RP.waitLast && f0.c === f0.m2 && f0.past <= -RP.ahead + 1e-9 && f0.aside <= RP.wide + 1e-9 && f0.jump <= STRIDE, `and with nobody else behind it, it waits ${f0 ? f0.waited.toFixed(2) : '-'}s (at most ${RP.waitLast}s) and he takes it in the box, ${f0 ? f0.past.toFixed(2) : '-'}m past the line: 1.10.1's second cut gave it to the nearest man wherever he stood, once 1.05m past the line`);
+  // shoved at time-up: an opponent running across to his ruck spot (not the tackler) shoved the picker, his stick holding him on the box's
+  // front edge, 0.03m out of it as the ruck's time ran out. The ball then waited its whole RUCKPICK.wait for him while the same man shoved
+  // him on out (to 1.34m, ahead of the line), and went to a team-mate behind it, the ring with it: 1.10.1's third cut, 3 times in about
+  // 2,000 matches with the stick held at 41 to 60 degrees (7.7m, 7.68m, 3.24m). Staged: on the step its time runs out, an opponent behind
+  // him runs into him. In the box he is not shoved (RUCKPICK.shield); with the shield off the shove nudges him out, within `put`, and he
+  // takes it on that step all the same: no wait, no switch, on the box's edge
+  const boxOut = (p, s) => { const d2 = dirOf(s.team), a = (p.x - s.x)*d2, y0 = Math.max(s.y - RP.wide, RP.touch), y1 = Math.min(s.y + RP.wide, 70 - RP.touch); return hyp(a - Math.min(a, -RP.ahead), p.y - clamp(p.y, y0, y1)); };
+  const shove = tLeft => {   // the state one step on, with tLeft s of the ruck to go before that step (STEP: its time runs out on it)
+    for (let i = 0; i < 12; i++) {
+      fresh(1); noJolt(); RUCK.pen = 0; M().diff.turnover = -1;
+      const kk = bind(FRONT, 'ai', 'wrap'), m2 = kk.own[1]; park(kk, m2);
+      if (!toRuck() || M().set.picker !== m2) continue;
+      const s = M().set, d2 = dirOf(s.team), side = s.y < 35 ? 1 : -1, o = kk.opp.find(q => q !== kk.q && q.down <= 0 && !q.bind);
+      kk.opp.forEach((q, k) => { if (q !== kk.q && q !== o) { q.x = clamp(s.x + d2*(12 + k), 1, 119); q.y = s.y - side*(10 + k); q.vx = q.vy = 0; } });   // the rest of the defence well clear
+      m2.x = s.x - d2*RP.ahead; m2.y = s.y + side*2; m2.vx = m2.vy = 0;   // on the box's front edge, 2m aside of the mark
+      o.x = m2.x - d2*1.1; o.y = m2.y; o.vx = d2*4; o.vy = 0; o.down = 0; o.offside = 0;   // behind him, running into him towards the ruck line
+      s.t = tLeft; const ring = M().ctrl, at = { x:m2.x, y:m2.y };
+      inp.jx = d2; inp.jy = 0; T.update(STEP); inp.jx = inp.jy = 0;
+      const c = M().ball.state === 'held' ? M().ball.carrier : null;
+      return { s, m2, o, c, out:boxOut(m2, s), set:M().phase === 'set', ringWas:ring === m2, ring:M().ctrl === m2, waited:s.waited || 0, past:c ? (c.x - s.x)*d2 : 99, jump:dist(m2, at) };
+    }
+    return null;
+  };
+  const sh1 = shove(1), sh0 = shove(STEP);
+  ok(sh1 && sh1.set && sh1.out <= RP.in + 1e-9 && RP.shield === true, `an opponent runs into the picker on the box's edge: in the box he is not shoved out of it (${sh1 ? sh1.out.toFixed(3) : '-'}m out)`);
+  ok(sh0 && !sh0.set && sh0.c === sh0.m2 && sh0.ringWas && sh0.ring && sh0.waited === 0 && sh0.past <= -RP.ahead + 1e-9 && sh0.jump <= STRIDE, `and on the step the ruck's time runs out he takes the ball there, with no wait and the ring still on him (${sh0 ? sh0.past.toFixed(2) : '-'}m past the line, moved ${sh0 ? sh0.jump.toFixed(2) : '-'}m)`);
+  RP.shield = false;
+  const ns1 = shove(1), ns0 = shove(STEP);
+  restore(RP, RP0);
+  ok(ns1 && ns1.set && ns1.out > RP.in && ns1.out >= 0.05 && ns1.out <= 0.15, `with the shield off, the shove nudges him about 0.1m out of the box (${ns1 ? ns1.out.toFixed(3) : '-'}m: past RUCKPICK.in, ${RP.in}m, well inside put, ${RP.put}m)`);
+  ok(ns0 && !ns0.set && ns0.c === ns0.m2 && ns0.ringWas && ns0.ring && ns0.waited === 0 && ns0.past <= -RP.ahead + 1e-9 && boxOut(ns0.c, ns0.s) <= 1e-9 && ns0.jump <= STRIDE, `and nudged out at time-up he still takes it at once, put back on the box's edge: no wait (${ns0 ? ns0.waited.toFixed(2) : '-'}s), no switch, ${ns0 ? ns0.past.toFixed(2) : '-'}m past the line, moved ${ns0 ? ns0.jump.toFixed(2) : '-'}m. 1.10.1's third cut held the ball for him here, while the shove went on`);
   // by touch: the box stops `touch` m in from the touchline, so the stick pushed to touch never takes the ball out of play (it used to
   // reach y = -3, and the other side had the lineout)
   const byTouch = () => {
@@ -844,9 +875,11 @@ begin('cpu sprint');
       while (!M().over && n++ < 60000) {
         bot(); const phase = M().phase, c0 = M().ball.state === 'held' ? M().ball.carrier : null;
         const easing = M().players.filter(p => p.team === 1 && p !== S.p && p.sprint > 0);   // an ease-out still running on this side before the step
-        const fading = easing.length, lv = prevP ? C.sprintLevel(prevP) : 1;
+        const fading = easing.length, lv = prevP ? C.sprintLevel(prevP) : 1, k0 = M().stats.cpuSprints || 0;
         T.update(STEP);
+        const blip = !S.p && !prevP && (M().stats.cpuSprints || 0) > k0;   // a sprint started and ended inside the step: begun in sprintTick, then bound or committed in the same step (endSprint), so it is charged that one step and no more
         if (S.m < -1e-9 || S.m > 1 + 1e-9) bad++;
+        if (blip) { starts++; if (prev < SPRINT.floor) bad++; const d1 = STEP/SPRINT.secs; if (!near(prev - S.m, d1, 1e-6) && !near(prev - S.m, d1*SPRINT.ballDrain, 1e-6)) bad++; prev = S.m; prevP = S.p; continue; }
         if (S.p && !prevP) { starts++; if (prev < SPRINT.floor) bad++; if (S.p.team !== 1) bad++;
           const B = M().ball;
           if (B.state === 'loose' && B.egg) { const dd = dist(S.p, T.press.eggLead(B)); if (dd >= SPRINT.cpu.min - 1 && dd <= SPRINT.cpu.max + 1) eggOk++; else eggBad++; }   // PRESSURE (2026-11-09): a ball spilled in this step, by an offload pressed or a jolt, is run down from 2.5-12m of where it comes down
@@ -1499,7 +1532,9 @@ done('25 switch');
 // 26. played: the casual adult (tools/bot.mjs) through every ruck of his, the stick held forward (the repro behind 1.10.1, RUCKPICK) and let
 // go (the default way to play). Last, as it reseeds: no ball from his own ruck comes out past the ruck line, none jumps its carrier, and
 // the man you control never changes as it comes out (the ring stays on the ruck's picker): the owner's "snaps back to another player"
-// is the ring moving, and 1.10.1's second cut moved it 5 to 17m about 1.35 times a match with the stick let go
+// is the ring moving, and 1.10.1's second cut moved it 5 to 17m about 1.35 times a match with the stick let go. The stick held at an angle
+// too (41 and 60 degrees, either side): it holds him on the box's front edge beside the ruck, where an opponent running across to his ruck
+// spot shoved him out, and the third cut moved the ring 3 times in about 2,000 matches (7.7m, 7.68m, 3.24m)
 begin('ruck held, played');
   {
     const { PROFILES, casualStep } = await import('./bot.mjs');
@@ -1524,7 +1559,8 @@ begin('ruck held, played');
       return out;
     };
     const base = +process.env.SEED*100000;
-    for (const [stick, name] of [[[1, 0], 'the stick held forward'], [[0, 0], 'the stick let go']]) {
+    const at = (deg, side) => [Math.cos(deg*Math.PI/180), side*Math.sin(deg*Math.PI/180)];   // the stick held forward and `deg` degrees to one side
+    for (const [stick, name] of [[[1, 0], 'the stick held forward'], [[0, 0], 'the stick let go'], [at(41, 1), 'the stick held 41 degrees off forward, one way'], [at(41, -1), 'the stick held 41 degrees off forward, the other way'], [at(60, 1), 'the stick held 60 degrees off forward, one way'], [at(60, -1), 'the stick held 60 degrees off forward, the other way']]) {
       const rel = [];
       for (let i = 0; i < 6; i++) rel.push(...play(base + i, i % 2, stick));
       const past = rel.filter(r => r.past > 1e-9), jumps = rel.filter(r => r.jump > 0.5), worst = Math.max(0, ...rel.map(r => r.jump)), sw = rel.filter(r => r.sw), waits = rel.filter(r => r.waited > 0);
