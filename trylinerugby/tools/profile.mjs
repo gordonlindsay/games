@@ -202,18 +202,18 @@ const club = id => X.ALL_TEAMS.find(t => t.id === id);
   const PR = T.practice, DR = T.drills, OPEN = ['tag', 'egg', 'circle', 'cones', 'pass', 'kick', 'defend'], ALL = OPEN.concat(['tackle', 'scrum', 'back']), JUNIOR = OPEN.concat(['tackle', 'back']);
   const games = () => DR.DRILLS.filter(d => !DR.barred(d.id)).map(d => d.id);
   const screen = () => ({ group:!$('pr-contact').hidden, n2:$('pr-contact').classList.contains('n2'), cards:['tackle', 'scrum', 'back'].filter(id => !$('pr-' + id).hidden) });
-  const LEVELS = [['Kids', 0], ['Easy', 1], ['Normal', 2], ['Hard', 3]], CATS = ['men', 'women', 'minis'];
+  const LEVELS = [['Minis', 0], ['Juniors', 1], ['Adults', 2], ['Professional', 3], ['International', 4]], CATS = ['men', 'women', 'minis'];
   const seenWas = st.drillSeen.slice(), lockerWas = T.locker.state(), saveWas = memory['tryline.v1'];
   const as = (age, seg, cat) => { fresh(); F.set({ age, gender:null, look:null }); T.kids.segSet(seg); st.cat = cat; st.drillSeen = DR.DRILLS.map(d => d.id); PR.leave(); D.goHome(); H.open('drills'); };   // every Watch How seen, so a card opens on its ready card
   // each age group's list, at every level and on every side
-  const want = (age, seg, cat) => (seg === 0 || cat === 'minis' || age === 'mini' ? OPEN : age === 'junior' ? JUNIOR : ALL);
+  const want = (age, seg, cat) => (seg === 0 || cat === 'minis' || age === 'mini' ? OPEN : age === 'junior' || seg === 1 ? JUNIOR : ALL);
   const bad = [];
   for (const age of ['mini', 'junior', 'adult', null]) for (const [lv, seg] of LEVELS) for (const cat of CATS) {
     as(age, seg, cat); const w = want(age, seg, cat), s = screen();
     const shown = w === OPEN ? !s.group && !s.n2 && !s.cards.length : w === JUNIOR ? s.group && s.n2 && json(s.cards) === '["tackle","back"]' : s.group && !s.n2 && s.cards.length === 3;
     if (json(games()) !== json(w) || !shown) bad.push(`${age}/${lv}/${cat}: ${games().join(',')} ${json(s)}`);
   }
-  ok(!bad.length, `each age group's games at every level and on every side: Mini the seven open games, no Contact Games; Junior the nine, Tackling and Ball Back in the group, no Driving card; Adult and no age group all ten; the Kids level and Minis the seven whatever the age group (${bad.slice(0, 4).join('; ') || '48 cases'})`);
+  ok(!bad.length, `Skill Games follow the stricter of the difficulty, profile age and team category: Minis seven, Juniors nine, Adults and above ten (${bad.slice(0, 4).join('; ') || '60 cases'})`);
   as(null, 2, 'men'); ok(json(games()) === json(ALL) && !DR.barred('scrum'), 'no age group counts as Adult: all ten, Driving with them');
   // the cause, pinned: a Mini who left the Kids level (past the grown-up check before 1.7, past Leave Minis? since), then played Men on
   // 2 Players' switch, used to see all three
