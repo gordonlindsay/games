@@ -29,7 +29,7 @@ const humanSlots = () => M.side.filter(s => s.human).map(s => inputs[s.seat]);  
    ones, because `team === 1` was the test for the CPU). */
 const cpuSide = t => M.role[t] === 'cpu';
 let earlyDiff = null;   // Normal's levers with EARLY.nudge, or null. Set for a match, never left over into the next.
-const diffOf = t => (M && M.kids ? KIDS.diff : M && M.early && earlyDiff && levelOf(t) === M.di ? earlyDiff : DIFF[levelOf(t)]);   // a Kids match (kids.js) plays both sides' terms from KIDS.diff
+const diffOf = t => (M && M.international && cpuSide(t) ? INTERNATIONAL_DIFF : M && M.kids ? KIDS.diff : M && M.early && earlyDiff && levelOf(t) === M.di ? earlyDiff : DIFF[levelOf(t)]);   // a Kids match (kids.js) plays both sides' terms from KIDS.diff
 const CALM = { x:0, y:0, mph:0 };
 
 function hexRgb(h) { const n = parseInt(h.slice(1), 16); return [n>>16&255, n>>8&255, n&255]; }
@@ -88,6 +88,7 @@ function newMatch(u, c, opts) {
     hooter:false, phase:'set', set:null, goal:null, phaseCount:0, poss:0,
     firstKick: rnd() < 0.5 ? 0 : 1, auto, two, demo:!!opts.demo, champ:!!opts.champ, headless:!!opts.headless, early:ease,
     cup:typeof opts.cup === 'string' ? opts.cup : null, cupKO:typeof opts.cup === 'string' && !!opts.cupKO,   // a cup match (src/cups.js): its id, and whether it is a knockout or a Test, which the Golden Try reads
+    international:!!opts.international && di === 2 && humans[0] !== humans[1],
     paused:false, over:false, cam:{ x:60, y:35 }, cut:null, surge:null,
     di, duels:auto ? 'off' : (opts.duels || 'off'), duelPending:null, dclock:0,
     duelLog:{ last:-99, lastKind:null, lastOwner:null, half:[0, 0], bonus:[false, false], fails:0 },

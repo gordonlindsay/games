@@ -13,7 +13,7 @@
      Grown-Ups panel. The grown-up check, then Are you 18 or over? and How Your Name Appears; Continue opens the grown-up's own mail app
      with the request written out (storeWallMail, src/store.js). The game sends nothing and keeps no name.
    ========================================================= */
-const STORE_NAMES = { champ:'Championship', career:'Career', create:'Create Team', hard:'Hard', import:'Add Your Team', legends:'Legends' };
+const STORE_NAMES = { champ:'Championship', career:'Career', create:'Create Team', hard:'Professional and International', import:'Add Your Team', legends:'Legends' };
 const STORE_LINE = { full:'Career · Championship · International · Create Team · Hard · Legends', fan:'Full Game · Add Your Team · Super Fan Badge' };   // the Full Game's in the store's own order (Career, Championship and International modes)
 const STORE_MSG = {
   pending:'Waiting for a grown-up to approve it.',
@@ -53,9 +53,9 @@ function storeRender() {
   if (g.classList.contains('note') !== ready) { g.classList.toggle('note', ready); g.setAttribute('aria-label', ready ? 'Grown-Ups, a suggestion waiting' : 'Grown-Ups'); }
   storeMark($('b-champ'), 'champ'); storeMark($('b-career'), 'career'); storeMark($('b-comps'), 'champ'); storeMark($('b-gcont'), 'champ');
   const seg = [...document.querySelectorAll('.seg[data-key]')].find(g => g.dataset.key === 'diff');
-  if (seg && seg.children[3]) storeMark(seg.children[3], 'hard');
+  if (seg) for (const b of [...seg.children].slice(3)) storeMark(b, 'hard');
   if (!storeHas('hard')) {
-    if (settings.diff === 2) settings.diff = 1;
+    if (settings.diff === 2) kidsSegSet(2);
     if (settings.twoDiff.includes(2)) settings.twoDiff = settings.twoDiff.map(v => Math.min(v, 1));
   }
   if (typeof lockerFanAward === 'function') lockerFanAward();   // an unlock owned before the trophies came earns its club's too (src/locker.js); in the app only
@@ -337,7 +337,7 @@ $('st-reset').addEventListener('click', storeKidsReset);
    and comes back either way); Keep Minis moves nothing. */
 function storeKidsEasy() {
   if (!kidsReady() || storeUi.busy) return;
-  const go = () => { settings.kids = false; settings.diff = 0; settings.kidsTop = 0; save(); storeUi.msg = STORE_MSG.easy; storeCardRender(); renderHome(); storeCardFocus(); };
+  const go = () => { kidsSegSet(1); settings.kidsTop = 0; save(); storeUi.msg = STORE_MSG.easy; storeCardRender(); renderHome(); storeCardFocus(); };
   if (!minisOn()) { go(); return; }
   $('m-store').hidden = true;
   const token = storeUi.token;

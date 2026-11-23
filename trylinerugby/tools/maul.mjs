@@ -488,7 +488,12 @@ begin('off');
 {
   const child = env => spawnSync(process.execPath, [fileURLToPath(import.meta.url), '--pins'], { env:{ ...process.env, ...env }, encoding:'utf8', maxBuffer:8 << 20 });
   const K = { KNOCK:'{"on":false}', CALLS:'{"on":false}', CHASE:'{"on":false}', RUCKPICK:'{"on":false}' };   // the knock-ons (src/knock.js, 2026-11-11), the possession calls (src/calls.js, 2026-11-13), the kick chase (src/chase.js, 2026-11-13) and the ruck picker (1.10.1, RUCKPICK in src/duels.js) off in all three: 20cbcaf exactly, so the maul's own proof stands as it was pinned
-  const off = child({ ...K, MAUL:'{"on":false}', PRESSURE:'{"on":false}' }), alone = child({ ...K, MAUL:'{"on":false}' }), on = child(K);
+  // Replay the historical fingerprints with their original set-piece balance.
+  const DIFF = JSON.stringify({
+    1: { scrumCpu:0.72, lineSigma:0.12, lineContest:0.65 },
+    2: { scrumCpu:0.80, lineSigma:0.07, lineContest:0.75 },
+  });
+  const off = child({ ...K, DIFF, MAUL:'{"on":false}', PRESSURE:'{"on":false}' }), alone = child({ ...K, DIFF, MAUL:'{"on":false}' }), on = child({ ...K, DIFF });
   const a = (off.stdout || '').trim(), m = (alone.stdout || '').trim(), b = (on.stdout || '').trim();
   ok(off.status === 0 && a === BASE_OFF, `MAUL and PRESSURE off: AI v AI, a tool's match, a played Quick Match, a Hard match and the demo play exactly as at b706c3e (${a}, pinned ${BASE_OFF})${off.stderr ? ' ' + off.stderr.slice(0, 300) : ''}`);
   ok(alone.status === 0 && m === BASE_PRESS, `MAUL off alone: they play exactly as the build before the maul on wt/pr14int, pressure in (${m}, pinned ${BASE_PRESS})${alone.stderr ? ' ' + alone.stderr.slice(0, 300) : ''}`);

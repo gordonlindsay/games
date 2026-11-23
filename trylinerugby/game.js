@@ -313,9 +313,10 @@ const KIT_COLOURS = [
 ];
 const DIFF = [
   { scrumCpu:0.60, lineSigma:0.19, lineContest:0.55, cpuSpeed:0.97, cpuTackle:0.56, myTackle:0.58, cpuIntercept:0.10, turnover:-0.03 },
-  { scrumCpu:0.72, lineSigma:0.12, lineContest:0.65, cpuSpeed:1.00, cpuTackle:0.64, myTackle:0.48, cpuIntercept:0.17, turnover:0.00 },
-  { scrumCpu:0.80, lineSigma:0.07, lineContest:0.75, cpuSpeed:1.04, cpuTackle:0.72, myTackle:0.42, cpuIntercept:0.25, turnover:0.03 },
+  { scrumCpu:0.74, lineSigma:0.10, lineContest:0.72, cpuSpeed:1.00, cpuTackle:0.64, myTackle:0.48, cpuIntercept:0.17, turnover:0.00 },
+  { scrumCpu:0.83, lineSigma:0.06, lineContest:0.80, cpuSpeed:1.04, cpuTackle:0.72, myTackle:0.42, cpuIntercept:0.25, turnover:0.03 },
 ];
+const INTERNATIONAL_DIFF = { ...DIFF[2], scrumCpu:0.88, lineSigma:0.045, lineContest:0.88, cpuSpeed:1.06, cpuTackle:0.76, cpuIntercept:0.29 };
 /* The first EARLY.games one-player matches on Normal only. A player who has not learned to turn and chase leaves one
    defender running the wrong way, so two levers move and nothing else: the other side runs at Easy's pace, and your
    teammates tackle a little more surely than on Easy (one of them is still being pulled out of the tackle). Easy and
@@ -1615,7 +1616,7 @@ const COACH_LINE = {
 const HOME_LAST = ['champ', 'career'];   // what Continue on the home picks up where both are under way: the one whose match started last (settings.last)
 const PICK_KEY = /^[A-Za-z0-9-]{1,24}$/, PICK_GROUP = /^[a-z0-9.-]{1,24}$/;   // a team's key (keyOf: a code, a made team's, a My League side's) and a ladder group's (pickLadder)
 const PICK_RECENT = 3, PICK_FAV = 12;   // Recent: a side's last three picks; Favourites: twelve at most, the oldest dropped
-let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:'int', cat:'men', twoDiff:[1, 1], played:0, kids:false, kidsR:0, kidsTop:0, last:null, myClub:null, myClubLegacy:false, myNat:null, drillSeen:[], camPick:false, finished:0, pick:[null, null], recent:[[], []], fav:[] };   // pool: the team screen's list (TEAM_LISTS); cat: Men | Women | Minis (TEAM_CATS); twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start; finished: one-player matches played to full time, for the Your Ball sign under the clock (ui-match.js); kids: the Kids level, a flag on Easy, and kidsR its hidden rating, 0 to 1 (kids.js); last: what the home's Continue picks up where a championship and a career are both under way, the one played last (HOME_LAST, ui-menus.js); myClub and myNat: My Team, a club's key and a nation's code, myClub null for no club (myClubTeam, ui-menus.js); myClubLegacy: a save from before 1.10, whose My Team with no club picked stays Farnham (cleanSettings); drillSeen: the games whose Watch How has played (drill-demo.js); camPick: the camera row has been used (cleanSettings)
+let settings = { half:0, diff:1, international:false, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:'int', cat:'men', twoDiff:[1, 1], played:0, kids:false, kidsR:0, kidsTop:0, last:null, myClub:null, myClubLegacy:false, myNat:null, drillSeen:[], camPick:false, finished:0, pick:[null, null], recent:[[], []], fav:[] };   // pool: the team screen's list (TEAM_LISTS); cat: Men | Women | Minis (TEAM_CATS); twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start; finished: one-player matches played to full time, for the Your Ball sign under the clock (ui-match.js); kids: the Kids level, a flag on Easy, and kidsR its hidden rating, 0 to 1 (kids.js); last: what the home's Continue picks up where a championship and a career are both under way, the one played last (HOME_LAST, ui-menus.js); myClub and myNat: My Team, a club's key and a nation's code, myClub null for no club (myClubTeam, ui-menus.js); myClubLegacy: a save from before 1.10, whose My Team with no club picked stays Farnham (cleanSettings); drillSeen: the games whose Watch How has played (drill-demo.js); camPick: the camera row has been used (cleanSettings)
 let champ = null, custom = [], champHistory = [], seasonSerial = 0;
 let career = null;   // the player career (src/career.js): its own seasons, never the championship's
 let cup = null, cupTurn = 0;   // Championship mode's cup under way (src/cups.js), and how many Home Nations Tours it has started, for the host in turn; saved only once there is one
@@ -1765,6 +1766,7 @@ function cleanSettings(g) {
   if (!g || typeof g !== 'object' || Array.isArray(g)) return;
   if (g.half === 0 || g.half === 1 || g.half === 2) settings.half = g.half;
   if (g.diff === 0 || g.diff === 1 || g.diff === 2) settings.diff = g.diff;
+  settings.international = g.diff === 2 && g.international === true;
   if (typeof g.sound === 'boolean') settings.sound = g.sound;
   if (typeof g.hints === 'boolean') settings.hints = g.hints;
   if (Array.isArray(g.twoHints) && g.twoHints.length === 2 && g.twoHints.every(v => typeof v === 'boolean')) settings.twoHints = [g.twoHints[0], g.twoHints[1]];
@@ -2190,7 +2192,7 @@ const humanSlots = () => M.side.filter(s => s.human).map(s => inputs[s.seat]);  
    ones, because `team === 1` was the test for the CPU). */
 const cpuSide = t => M.role[t] === 'cpu';
 let earlyDiff = null;   // Normal's levers with EARLY.nudge, or null. Set for a match, never left over into the next.
-const diffOf = t => (M && M.kids ? KIDS.diff : M && M.early && earlyDiff && levelOf(t) === M.di ? earlyDiff : DIFF[levelOf(t)]);   // a Kids match (kids.js) plays both sides' terms from KIDS.diff
+const diffOf = t => (M && M.international && cpuSide(t) ? INTERNATIONAL_DIFF : M && M.kids ? KIDS.diff : M && M.early && earlyDiff && levelOf(t) === M.di ? earlyDiff : DIFF[levelOf(t)]);   // a Kids match (kids.js) plays both sides' terms from KIDS.diff
 const CALM = { x:0, y:0, mph:0 };
 
 function hexRgb(h) { const n = parseInt(h.slice(1), 16); return [n>>16&255, n>>8&255, n&255]; }
@@ -2249,6 +2251,7 @@ function newMatch(u, c, opts) {
     hooter:false, phase:'set', set:null, goal:null, phaseCount:0, poss:0,
     firstKick: rnd() < 0.5 ? 0 : 1, auto, two, demo:!!opts.demo, champ:!!opts.champ, headless:!!opts.headless, early:ease,
     cup:typeof opts.cup === 'string' ? opts.cup : null, cupKO:typeof opts.cup === 'string' && !!opts.cupKO,   // a cup match (src/cups.js): its id, and whether it is a knockout or a Test, which the Golden Try reads
+    international:!!opts.international && di === 2 && humans[0] !== humans[1],
     paused:false, over:false, cam:{ x:60, y:35 }, cut:null, surge:null,
     di, duels:auto ? 'off' : (opts.duels || 'off'), duelPending:null, dclock:0,
     duelLog:{ last:-99, lastKind:null, lastOwner:null, half:[0, 0], bonus:[false, false], fails:0 },
@@ -11865,7 +11868,7 @@ function startMatch(u, c, isChamp, o) {
   const ease = !pair && settings.diff === 1 && settings.played < EARLY.games;   // counted as the match starts, so quitting does not play the kinder game again
   if (!pair) { settings.played = Math.min(99, settings.played + 1); save(); }
   u = realSide(teamOf(u)); c = realSide(teamOf(c));          // this week's Form (src/results.js): a copy of a boosted side for this match only, the side itself otherwise
-  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, cup:o && o.cup, cupKO:o && o.cupKO, duels:'live', early:ease, arcade:true, kids:!pair && kidsLevel() && !(o && o.easy), kidsR:settings.kidsR,   // the switch is gone: a match you play always has duels; Kids is one player's, at the child's own rating
+  newMatch(u, c, { halfLen:HALF_SECONDS[settings.half], diff:settings.diff, champ:isChamp, cup:o && o.cup, cupKO:o && o.cupKO, duels:'live', early:ease, international:!pair && settings.diff === 2 && settings.international, arcade:true, kids:!pair && kidsLevel() && !(o && o.easy), kidsR:settings.kidsR,   // the switch is gone: a match you play always has duels; Kids is one player's, at the child's own rating
     humans:pair ? [true, true] : null, levels:pair ? (o.levels || [settings.diff, settings.diff]) : null });
   M.you = !pair && typeof profileYou === 'function' ? profileYou() : null;   // your profile's look on one man of your side, the fly-half (src/profile.js): drawing only, made after the match so nothing in it moves
   if (!pair && (M.champ || M.cup) && settings.last !== 'champ') { settings.last = 'champ'; save(); }   // the home's Continue picks up the one played last (ui-menus.js); a career's own cup match is the career's (careerArm)
@@ -12657,7 +12660,7 @@ $('s-home').addEventListener('keydown', e => {
 for (const seg of document.querySelectorAll('.seg[data-key]')) {
   [...seg.children].forEach((btn, i) => btn.addEventListener('click', () => {
     const key = seg.dataset.key;
-    if (key === 'diff' && i === 3 && !storeGate('hard', () => btn.click())) return;   // Hard is in the Full Game (src/store.js)
+    if (key === 'diff' && i >= 3 && !storeGate('hard', () => btn.click())) return;   // Hard is in the Full Game (src/store.js)
     if (key === 'diff' && kidsLevel() && i !== 0 && minisOn()) { minisAsk(() => { kidsSegSet(i); save(); renderHome(); }); return; }   // a Mini taking the game off the Kids level is asked Leave Minis? first, and Keep Minis leaves it as it was; anyone else switches at once, with no grown-up check (the owner, 2026-11-14: kids.js)
     if (key === 'diff') kidsSegSet(i); else if (BOOL[key]) settings[key] = i === 0; else settings[key] = i;
     if (key === 'cam') { settings.camPick = true; if (M && M.cut) $('pz-cam-note').hidden = false; if (!(M && M.paused) && !$('s-home').hidden) BV.peekUntil = performance.now() + BV_DEMO_PEEK; }   // on the home, the demo behind it shows the height just picked for a moment (PR #14); the pause card's row changes the match itself   // a real choice, so a Top chosen here survives a reload (cleanSettings); a close-up has its own camera, so the pause card says so
@@ -16087,9 +16090,9 @@ function kidsAdapt() {                                     // full time in a Kid
 const KIDS_EASY = { top:0.95, margin:3, run:5 };
 const kidsReady = () => kidsLevel() && (settings.kidsTop | 0) >= KIDS_EASY.run;
 const kidsLevel = () => !!settings.kids && settings.diff === 0;
-/* The home Difficulty row is Kids | Easy | Normal | Hard: button 0 is the flag, buttons 1-3 are diff 0-2. */
-const kidsSegIndex = () => (kidsLevel() ? 0 : settings.diff + 1);
-function kidsSegSet(i) { settings.kids = i === 0; settings.diff = clamp(i - 1, 0, 2); }
+/* The fifth setting uses the Hard timing tables with a stronger CPU. */
+const kidsSegIndex = () => (kidsLevel() ? 0 : settings.diff === 2 && settings.international ? 4 : settings.diff + 1);
+function kidsSegSet(i) { settings.kids = i === 0; settings.international = i === 4; settings.diff = clamp(i - 1, 0, 2); }
 
 /* ---------- the levers the engine calls (each caller checks M.kids first) ---------- */
 function kidsDuel(c, res, act) {                           // a close-up you get wrong (early, late or the wrong way) still comes off KIDS.save of the time, a Perfect if the press was in the gold
@@ -16313,7 +16316,7 @@ window.addEventListener('keydown', e => {                  // while the card is 
      Grown-Ups panel. The grown-up check, then Are you 18 or over? and How Your Name Appears; Continue opens the grown-up's own mail app
      with the request written out (storeWallMail, src/store.js). The game sends nothing and keeps no name.
    ========================================================= */
-const STORE_NAMES = { champ:'Championship', career:'Career', create:'Create Team', hard:'Hard', import:'Add Your Team', legends:'Legends' };
+const STORE_NAMES = { champ:'Championship', career:'Career', create:'Create Team', hard:'Professional and International', import:'Add Your Team', legends:'Legends' };
 const STORE_LINE = { full:'Career · Championship · International · Create Team · Hard · Legends', fan:'Full Game · Add Your Team · Super Fan Badge' };   // the Full Game's in the store's own order (Career, Championship and International modes)
 const STORE_MSG = {
   pending:'Waiting for a grown-up to approve it.',
@@ -16353,9 +16356,9 @@ function storeRender() {
   if (g.classList.contains('note') !== ready) { g.classList.toggle('note', ready); g.setAttribute('aria-label', ready ? 'Grown-Ups, a suggestion waiting' : 'Grown-Ups'); }
   storeMark($('b-champ'), 'champ'); storeMark($('b-career'), 'career'); storeMark($('b-comps'), 'champ'); storeMark($('b-gcont'), 'champ');
   const seg = [...document.querySelectorAll('.seg[data-key]')].find(g => g.dataset.key === 'diff');
-  if (seg && seg.children[3]) storeMark(seg.children[3], 'hard');
+  if (seg) for (const b of [...seg.children].slice(3)) storeMark(b, 'hard');
   if (!storeHas('hard')) {
-    if (settings.diff === 2) settings.diff = 1;
+    if (settings.diff === 2) kidsSegSet(2);
     if (settings.twoDiff.includes(2)) settings.twoDiff = settings.twoDiff.map(v => Math.min(v, 1));
   }
   if (typeof lockerFanAward === 'function') lockerFanAward();   // an unlock owned before the trophies came earns its club's too (src/locker.js); in the app only
@@ -16637,7 +16640,7 @@ $('st-reset').addEventListener('click', storeKidsReset);
    and comes back either way); Keep Minis moves nothing. */
 function storeKidsEasy() {
   if (!kidsReady() || storeUi.busy) return;
-  const go = () => { settings.kids = false; settings.diff = 0; settings.kidsTop = 0; save(); storeUi.msg = STORE_MSG.easy; storeCardRender(); renderHome(); storeCardFocus(); };
+  const go = () => { kidsSegSet(1); settings.kidsTop = 0; save(); storeUi.msg = STORE_MSG.easy; storeCardRender(); renderHome(); storeCardFocus(); };
   if (!minisOn()) { go(); return; }
   $('m-store').hidden = true;
   const token = storeUi.token;
@@ -18743,7 +18746,7 @@ const profileAt = id => PROFILE_STEPS.findIndex(s => s.id === id);   // a step's
    Kids | Easy | Normal | Hard, the Difficulty row's four in its order (kidsSegSet's index), in equal quarters. Every level on one ground
    (the pitch's --rule-hi) with chalk balls, so no level reads as an age group's card: the count of balls carries the level, one to four.
    Hard carries the game's lock on the free tier and opens the Unlock card (storeGate('hard')), as the Difficulty row's Hard does. */
-const PROFILE_LEVELS = [{ id:'kids', name:'Kids', n:1, k:'var(--rule-hi)' }, { id:'easy', name:'Easy', n:2, k:'var(--rule-hi)' }, { id:'normal', name:'Normal', n:3, k:'var(--rule-hi)' }, { id:'hard', name:'Hard', n:4, k:'var(--rule-hi)' }];
+const PROFILE_LEVELS = [{ id:'kids', name:'Minis', n:1, k:'var(--rule-hi)' }, { id:'easy', name:'Juniors', n:2, k:'var(--rule-hi)' }, { id:'normal', name:'Adults', n:3, k:'var(--rule-hi)' }, { id:'hard', name:'Professional', n:4, k:'var(--rule-hi)' }, { id:'international', name:'International', n:5, k:'var(--rule-hi)' }];
 /* The level an age group suggests, marked and focused as the step opens until one is picked: Mini Kids, Junior Easy, Adult (or no age
    group) Normal. Skip keeps it: the age group sets it as ever (profileSet). */
 const profileSuggest = age => PROFILE_LEVELS[profileLevel(age) ?? 2].id;
@@ -18840,7 +18843,7 @@ function profileFigure(x, s, hair) {
 /* A level's picture: a real pile of the game's ball (its -35 degree lie, the laces in the ground's colour), each ball as wide as a figure:
    one; two side by side; two with one on top; and Hard's, one more on top of that. The bottom row sits on the figures' foot line (y 63).
    Every level's picture has the one viewBox, tall enough for Hard's pile, so a ball is the same size on all four cards. */
-const PROFILE_BALL_AT = { 1:[[24, 48]], 2:[[7, 48], [41, 48]], 3:[[7, 48], [41, 48], [24, 24]], 4:[[7, 48], [41, 48], [24, 24], [24, 0]] };
+const PROFILE_BALL_AT = { 1:[[24, 48]], 2:[[7, 48], [41, 48]], 3:[[7, 48], [41, 48], [24, 24]], 4:[[7, 48], [41, 48], [24, 24], [24, 0]], 5:[[7, 48], [41, 48], [7, 24], [41, 24], [24, 0]] };
 function profileBalls(n) {
   return PROFILE_BALL_AT[n].map(([x, y]) => `<g transform="translate(${x} ${y}) rotate(-35)"><ellipse rx="20" ry="11.8" stroke="var(--k)" stroke-width="2.5"/><path d="M-9 0h18M-4.5 -3.8v7.6M0 -3.8v7.6M4.5 -3.8v7.6" fill="none" stroke="var(--k)" stroke-width="2.6" stroke-linecap="round"/></g>`).join('');
 }
@@ -18913,7 +18916,7 @@ function profileStep(i, focus) {
   $('su-title').textContent = st.title;
   $('su-back').disabled = !R.step;                       // nothing before the first step: its slot kept empty (the title stands where it does on every step), and Skip the one way on
   $('su-opts').innerHTML = opts.map(o => `<button class="btn su-opt" data-v="${o.id}" aria-pressed="${o.id === now}" style="--k:${o.k}"><span class="su-pic">${profilePic(st.id, o)}</span><span class="su-word">${esc(o.name)}</span>${o.line ? `<span class="su-line">${esc(o.line)}</span>` : ''}</button>`).join('');
-  for (const b of $('su-opts').querySelectorAll('[data-v]')) { b.addEventListener('click', () => profileAnswer(b.dataset.v)); if (b.dataset.v === 'hard' && typeof storeMark === 'function') storeMark(b, 'hard'); }   // Hard: the game's lock on the free tier
+  for (const b of $('su-opts').querySelectorAll('[data-v]')) { b.addEventListener('click', () => profileAnswer(b.dataset.v)); if (['hard', 'international'].includes(b.dataset.v) && typeof storeMark === 'function') storeMark(b, 'hard'); }   // Hard: the game's lock on the free tier
   showScreen('s-setup'); $('s-setup').scrollTop = 0;
   profileFocus($('s-setup'), focus || DEFAULT_FOCUS['s-setup']());
 }
@@ -18936,7 +18939,7 @@ function profileAnswer(v) {
   if (st.id === 'age' && profileKnows(PROFILE_AGES, v)) { if (R.age !== v) R.level = null; R.age = v; }   // a new age group: its own level suggested again, a level picked for the old one cleared
   else if (st.id === 'level' && profileKnows(PROFILE_LEVELS, v)) {
     const go = () => { if (profileRun !== R) return; R.level = v; profileStep(R.step + 1); };
-    if (v === 'hard' && !storeGate('hard', () => profileAnswer(v))) return;   // Hard is in the Full Game: the Unlock card, and the step as it was
+    if (['hard', 'international'].includes(v) && !storeGate('hard', () => profileAnswer(v))) return;   // Hard is in the Full Game: the Unlock card, and the step as it was
     if (R.age === 'mini' && v !== 'kids') { minisAsk(go); return; }   // a Mini off Kids is asked Leave Minis?, as on the Difficulty row; Keep Minis: the step as it was, Kids marked
     go(); return;
   }

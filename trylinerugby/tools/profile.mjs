@@ -619,7 +619,7 @@ async function browserChecks() {
           const arrows = []; await p5.evaluate(() => document.querySelector('#hp-settings [data-key="diff"] button').focus());
           for (const k of ['ArrowDown', 'ArrowDown', 'ArrowDown', 'ArrowUp', 'ArrowUp', 'ArrowUp', 'ArrowUp']) { await p5.keyboard.press(k); arrows.push(await name()); }
           await p5.evaluate(() => document.querySelector('#set-gender [data-v="na"]').focus()); await p5.keyboard.press('ArrowDown'); arrows.push(await name()); await p5.keyboard.press('ArrowUp'); arrows.push(await name());
-          ok(json(tabs) === json(['diff:Kids', 'diff:Easy', 'diff:Normal', 'diff:Hard', 'set-age:mini', 'set-age:junior', 'set-age:adult', 'set-gender:male', 'set-gender:female', 'set-gender:na', 'sound:On']), `${kind}: Tab goes Difficulty, then Age Group, then Gender, then the rest (${tabs.join(' ')})`);
+          ok(json(tabs) === json(['diff:Minis', 'diff:Juniors', 'diff:Adults', 'diff:Professional', 'diff:International', 'set-age:mini', 'set-age:junior', 'set-age:adult', 'set-gender:male', 'set-gender:female', 'set-gender:na', 'sound:On']), `${kind}: Tab goes Difficulty, then Age Group, then Gender, then the rest (${tabs.join(' ')})`);
           ok(json(arrows) === json(['set-age:mini', 'sound:On', 'half:2 Min', 'sound:On', 'set-age:mini', 'diff:Kids', 'ts-tabs:Game', 'hints:Off', 'set-gender:na']), `${kind}: Down from Kids to Mini, to Sound's On, to Half Length's 2 Min, and Up back the same way to the Game tab over it (1.10, where Back was); Down from Not Say to Match Help's Off and Up again (${arrows.join(' ')})`);
           // a controller: the ring from its first press reaches every button of Settings, and Down from Kids goes a row at a time
           const pad = await p5.evaluate(() => {

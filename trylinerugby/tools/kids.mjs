@@ -3,6 +3,11 @@
 // The rating's scale, its update rule, its bounds, its save and its gating are section 13; tools/kidbots.mjs calibrates it with scripted children.
 // node tools/kids.mjs   Exits 1 on any failure.
 process.env.SEED ??= '29';
+// The Kids regression fingerprints compare against the original set-piece balance.
+process.env.DIFF ??= JSON.stringify({
+  1: { scrumCpu:0.72, lineSigma:0.12, lineContest:0.65 },
+  2: { scrumCpu:0.80, lineSigma:0.07, lineContest:0.75 },
+});
 const { T, reseed, fire, kickBot, dropBot, bot, LOCAL_ON, RERATE, LOCAL_CHILD, rerateProofs, ruckpickProof } = await import('./harness.mjs');
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -23,7 +28,7 @@ const run = (until, max, each) => { for (let n = 0; n < max; n++) { if (until())
   const s = S();
   ok(s.kids === false && !K.kidsLevel(), 'a new game is not on Kids');
   const row = html.match(/<div class="seg" data-key="diff">(.*?)<\/div>/)[1].match(/<button>([^<]+)<\/button>/g).map(b => b.replace(/<\/?button>/g, ''));
-  ok(row.join() === 'Kids,Easy,Normal,Hard', `the Difficulty row reads ${row.join(' | ')}`);
+  ok(row.join() === 'Minis,Juniors,Adults,Professional,International', `the Difficulty row reads ${row.join(' | ')}`);
   const want = [[true, 0], [false, 0], [false, 1], [false, 2]];
   for (let i = 0; i < 4; i++) {
     K.segSet(i);

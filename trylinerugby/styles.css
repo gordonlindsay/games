@@ -1709,7 +1709,7 @@ summary::-webkit-details-marker{display:none}
 .su-pic svg{display:block;height:100%;max-height:128px;width:auto;fill:var(--night)}
 .su-word{font:900 36px/1 var(--display);text-transform:uppercase;letter-spacing:.02em}
 .su-line{margin-top:-2px;font:700 15px/1.2 var(--body);color:var(--chalk-dim)}
-.su-opts.su-lvl{grid-template-columns:repeat(4,minmax(0,1fr))}   /* the setup's Difficulty (1.10): Kids | Easy | Normal | Hard in equal quarters */
+.su-opts.su-lvl{grid-template-columns:repeat(5,minmax(0,1fr))}
 .su-opts.su-lvl .su-pic svg{fill:var(--chalk);min-width:0;max-width:100%}   /* chalk balls on the pitch's --rule-hi; the pile scaled down, never cut, where a quarter is narrow */
 .btn.su-opt.locked{position:relative}
 .btn.su-opt.locked::after{position:absolute;top:10px;right:12px;margin:0}   /* Hard's lock on the free tier, in the card's corner */
@@ -1917,3 +1917,6 @@ body:has(#m-filter.fl-embed:not([hidden])) #s-teams .btn.pk-find{visibility:hidd
   .ts-shirt .jersey{width:34px;height:34px}
   .ts-id b{font-size:22px}
 }
+
+.set-diff .seg button{min-width:0;min-height:44px;white-space:normal;overflow-wrap:anywhere}
+.su-lvl .su-word{font-size:clamp(13px,2.5vw,30px);overflow-wrap:anywhere}
