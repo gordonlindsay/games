@@ -18102,12 +18102,12 @@ const PRACTICE_COACH = 'Learn Real Tackling With a Club Coach. Not One to Try at
    and the side (src/profile.js), in free play as much as on the career's own list. */
 const practiceYoung = () => kidsLevel() || settings.cat === 'minis' || profile.age === 'mini';
 /* The one rule, for every route in (the owner, 2026-11-14: "Remove the contact mini games for mini players. Same for scrums until adult",
-   the scrums "Driving Game Only"): no contact game for the youngest, and Driving for an Adult only, so a Junior plays Tackling and Ball
-   Back without it. No age group counts as Adult. */
+   the scrums "Driving Game Only"): no contact game for the youngest, and Driving from Adults difficulty upwards, unless the profile is a Junior.
+   Juniors can play Tackling and Ball Back. */
 function practiceBarred(id) {
   const d = PRACTICE_DRILLS.find(x => x.id === id);
   if (!d || !d.contact) return false;
-  return practiceYoung() || (!!d.adult && (profile.age === 'mini' || profile.age === 'junior'));
+  return practiceYoung() || (!!d.adult && (settings.diff === 0 || profile.age === 'junior'));
 }
 function practiceNextId(id) {                              // Next Game: the next one this player may play
   const n = PRACTICE_DRILLS.length, i = PRACTICE_DRILLS.findIndex(d => d.id === id);
