@@ -66,7 +66,7 @@ if (process.env.CHASE_LATE === 'off') { const cut = js.replace(/\n  if \(mode ==
 // CONTACT='{"bind":0.3}' RUCK='{"flatBase":0.09}' SPRINT='{"mul":[1.25,1.25,1.2]}' RUNON='{"cpu":0.6}' PASS_FLIGHT='{"kids":1.4}' SUPPORT='{"mark":4}' MOVES='{"step":{"push":4}}' DUEL_SLOW='{"rate":1}' TDUEL='{"hold":0.3}' PRESSURE='{"on":false}' RUCKPICK='{"on":false}' deep-merge into the contact, ruck, Sprint, passing, pass flight, support, open-play move, duel slow-motion, Tackle duel trigger, pressure and ruck picker levers
 // (RUCKPICK off: the ruck picker as 8fb3bc0 (1.10), the nearest man to the mark and a stick that places him anywhere, draw for draw: the proof behind 1.10.1's re-pins)
 {
-  const tune = ['CONTACT', 'RUCK', 'SPRINT', 'RUNON', 'PASS_FLIGHT', 'SUPPORT', 'MOVES', 'DUEL_SLOW', 'TDUEL', 'PRESSURE', 'RUCKPICK'].filter(k => process.env[k]).map(k => `deep(${k}, ${process.env[k]});`).join(' ');
+  const tune = ['CONTACT', 'RUCK', 'SPRINT', 'RUNON', 'PASS_FLIGHT', 'SUPPORT', 'MOVES', 'DUEL_SLOW', 'TDUEL', 'PRESSURE', 'RUCKPICK', 'DIFF'].filter(k => process.env[k]).map(k => `deep(${k}, ${process.env[k]});`).join(' ');
   if (tune) js = js.replace('// CONTACT_TUNE', `{ const deep = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = (v && typeof v === 'object' && !Array.isArray(v)) ? deep(Object.assign({}, a[k]), v) : v; return a; }; ${tune} }`);
 }
 

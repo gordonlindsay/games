@@ -311,8 +311,8 @@ const KIT_COLOURS = [
 ];
 const DIFF = [
   { scrumCpu:0.60, lineSigma:0.19, lineContest:0.55, cpuSpeed:0.97, cpuTackle:0.56, myTackle:0.58, cpuIntercept:0.10, turnover:-0.03 },
-  { scrumCpu:0.72, lineSigma:0.12, lineContest:0.65, cpuSpeed:1.00, cpuTackle:0.64, myTackle:0.48, cpuIntercept:0.17, turnover:0.00 },
-  { scrumCpu:0.80, lineSigma:0.07, lineContest:0.75, cpuSpeed:1.04, cpuTackle:0.72, myTackle:0.42, cpuIntercept:0.25, turnover:0.03 },
+  { scrumCpu:0.74, lineSigma:0.10, lineContest:0.72, cpuSpeed:1.00, cpuTackle:0.64, myTackle:0.48, cpuIntercept:0.17, turnover:0.00 },
+  { scrumCpu:0.83, lineSigma:0.06, lineContest:0.80, cpuSpeed:1.04, cpuTackle:0.72, myTackle:0.42, cpuIntercept:0.25, turnover:0.03 },
 ];
 /* The first EARLY.games one-player matches on Normal only. A player who has not learned to turn and chase leaves one
    defender running the wrong way, so two levers move and nothing else: the other side runs at Easy's pace, and your
