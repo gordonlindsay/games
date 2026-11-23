@@ -41,7 +41,7 @@ const profileAt = id => PROFILE_STEPS.findIndex(s => s.id === id);   // a step's
    Kids | Easy | Normal | Hard, the Difficulty row's four in its order (kidsSegSet's index), in equal quarters. Every level on one ground
    (the pitch's --rule-hi) with chalk balls, so no level reads as an age group's card: the count of balls carries the level, one to four.
    Hard carries the game's lock on the free tier and opens the Unlock card (storeGate('hard')), as the Difficulty row's Hard does. */
-const PROFILE_LEVELS = [{ id:'kids', name:'Kids', n:1, k:'var(--rule-hi)' }, { id:'easy', name:'Easy', n:2, k:'var(--rule-hi)' }, { id:'normal', name:'Normal', n:3, k:'var(--rule-hi)' }, { id:'hard', name:'Hard', n:4, k:'var(--rule-hi)' }];
+const PROFILE_LEVELS = [{ id:'kids', name:'Minis', n:1, k:'var(--rule-hi)' }, { id:'easy', name:'Juniors', n:2, k:'var(--rule-hi)' }, { id:'normal', name:'Adults', n:3, k:'var(--rule-hi)' }, { id:'hard', name:'Professional', n:4, k:'var(--rule-hi)' }, { id:'international', name:'International', n:5, k:'var(--rule-hi)' }];
 /* The level an age group suggests, marked and focused as the step opens until one is picked: Mini Kids, Junior Easy, Adult (or no age
    group) Normal. Skip keeps it: the age group sets it as ever (profileSet). */
 const profileSuggest = age => PROFILE_LEVELS[profileLevel(age) ?? 2].id;
@@ -138,7 +138,7 @@ function profileFigure(x, s, hair) {
 /* A level's picture: a real pile of the game's ball (its -35 degree lie, the laces in the ground's colour), each ball as wide as a figure:
    one; two side by side; two with one on top; and Hard's, one more on top of that. The bottom row sits on the figures' foot line (y 63).
    Every level's picture has the one viewBox, tall enough for Hard's pile, so a ball is the same size on all four cards. */
-const PROFILE_BALL_AT = { 1:[[24, 48]], 2:[[7, 48], [41, 48]], 3:[[7, 48], [41, 48], [24, 24]], 4:[[7, 48], [41, 48], [24, 24], [24, 0]] };
+const PROFILE_BALL_AT = { 1:[[24, 48]], 2:[[7, 48], [41, 48]], 3:[[7, 48], [41, 48], [24, 24]], 4:[[7, 48], [41, 48], [24, 24], [24, 0]], 5:[[7, 48], [41, 48], [7, 24], [41, 24], [24, 0]] };
 function profileBalls(n) {
   return PROFILE_BALL_AT[n].map(([x, y]) => `<g transform="translate(${x} ${y}) rotate(-35)"><ellipse rx="20" ry="11.8" stroke="var(--k)" stroke-width="2.5"/><path d="M-9 0h18M-4.5 -3.8v7.6M0 -3.8v7.6M4.5 -3.8v7.6" fill="none" stroke="var(--k)" stroke-width="2.6" stroke-linecap="round"/></g>`).join('');
 }
@@ -211,7 +211,7 @@ function profileStep(i, focus) {
   $('su-title').textContent = st.title;
   $('su-back').disabled = !R.step;                       // nothing before the first step: its slot kept empty (the title stands where it does on every step), and Skip the one way on
   $('su-opts').innerHTML = opts.map(o => `<button class="btn su-opt" data-v="${o.id}" aria-pressed="${o.id === now}" style="--k:${o.k}"><span class="su-pic">${profilePic(st.id, o)}</span><span class="su-word">${esc(o.name)}</span>${o.line ? `<span class="su-line">${esc(o.line)}</span>` : ''}</button>`).join('');
-  for (const b of $('su-opts').querySelectorAll('[data-v]')) { b.addEventListener('click', () => profileAnswer(b.dataset.v)); if (b.dataset.v === 'hard' && typeof storeMark === 'function') storeMark(b, 'hard'); }   // Hard: the game's lock on the free tier
+  for (const b of $('su-opts').querySelectorAll('[data-v]')) { b.addEventListener('click', () => profileAnswer(b.dataset.v)); if (['hard', 'international'].includes(b.dataset.v) && typeof storeMark === 'function') storeMark(b, 'hard'); }   // Hard: the game's lock on the free tier
   showScreen('s-setup'); $('s-setup').scrollTop = 0;
   profileFocus($('s-setup'), focus || DEFAULT_FOCUS['s-setup']());
 }
@@ -234,7 +234,7 @@ function profileAnswer(v) {
   if (st.id === 'age' && profileKnows(PROFILE_AGES, v)) { if (R.age !== v) R.level = null; R.age = v; }   // a new age group: its own level suggested again, a level picked for the old one cleared
   else if (st.id === 'level' && profileKnows(PROFILE_LEVELS, v)) {
     const go = () => { if (profileRun !== R) return; R.level = v; profileStep(R.step + 1); };
-    if (v === 'hard' && !storeGate('hard', () => profileAnswer(v))) return;   // Hard is in the Full Game: the Unlock card, and the step as it was
+    if (['hard', 'international'].includes(v) && !storeGate('hard', () => profileAnswer(v))) return;   // Hard is in the Full Game: the Unlock card, and the step as it was
     if (R.age === 'mini' && v !== 'kids') { minisAsk(go); return; }   // a Mini off Kids is asked Leave Minis?, as on the Difficulty row; Keep Minis: the step as it was, Kids marked
     go(); return;
   }

@@ -7,6 +7,11 @@
 // GAME=/path/to/index.html HOME_PRINT=1 node tools/home.mjs prints section 0's fingerprint for that build and stops: how BASE was pinned.
 // CLUB_RATED=off HOME_PRINT=1 node tools/home.mjs prints it with no club rated from PR #14's tables: the proof behind the last re-pin.
 process.env.SEED ??= '61';
+// Home navigation's historical fingerprints use the original set-piece balance.
+if (!process.env.HOME_PRINT) process.env.DIFF ??= JSON.stringify({
+  1: { scrumCpu:0.72, lineSigma:0.12, lineContest:0.65 },
+  2: { scrumCpu:0.80, lineSigma:0.07, lineContest:0.75 },
+});
 const { T, reseed, bot, LOCAL_ON, RERATE, LOCAL_CHILD, rerateProofs, ruckpickProof } = await import('./harness.mjs');
 import fs from 'node:fs';
 import http from 'node:http';
@@ -233,7 +238,7 @@ const fresh = (club = 'FAR') => {
   fresh(); S.setTier('free'); D.goHome();
   ok(['b-comps', 'b-career', 'b-gcont'].every(id => $(id).classList.contains('locked')) && ['b-match', 'b-drills', 'b-set', 'b-quick', 'b-my', 'b-locker', 'b-help'].every(id => !$(id).classList.contains('locked')) && !/id="b-two"/.test(html), 'free: Competitions and Career locked; Game, Quick Match, Skill Games, Team and Settings, My Team\'s Change and the Locker not (and no 2 Players to lock)');
   ok($('b-import').classList.contains('locked'), 'Add Your Team locked: it is the Super Fan\'s');
-  ok(/if \(seg && seg\.children\[3\]\) storeMark\(seg\.children\[3\], 'hard'\);/.test(fs.readFileSync(new URL('../src/ui-store.js', import.meta.url), 'utf8')) && /if \(key === 'diff' && i === 3 && !storeGate\('hard'/.test(menus), 'Hard keeps its lock and its gate in Settings');
+  ok(/seg\.children\]\.slice\(3\)\) storeMark\(b, 'hard'\)/.test(fs.readFileSync(new URL('../src/ui-store.js', import.meta.url), 'utf8')) && /if \(key === 'diff' && i >= 3 && !storeGate\('hard'/.test(menus), 'Professional and International keep the Full Game lock in Settings');
   $('b-match').click(); $('b-comps').click(); ok(H.step() === 'champ' && $('m-store').hidden, 'Competitions opens its step, each competition locked in it');
   H.champPick('eng'); ok(!$('m-store').hidden && S.ui().feature === 'champ' && shown() === 's-home', 'a competition opens the Unlock card, not the team screen'); S.close();
   $('b-career').click(); ok(!$('m-store').hidden && S.ui().feature === 'career', 'Career opens the Unlock card'); S.close();

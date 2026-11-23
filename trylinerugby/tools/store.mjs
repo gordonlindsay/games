@@ -184,9 +184,9 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   const s = D.settings(); s.diff = 2; s.kids = false; s.twoDiff = [2, 0];
   D.goHome();
   ok(s.diff === 1 && s.twoDiff.join() === '1,0', 'a saved Hard is played as Normal while Hard is locked');
-  ok(S.gate('hard') === false && !$('m-store').hidden && S.ui().feature === 'hard' && $('st-title').textContent === 'Hard', 'pressing Hard opens the Unlock card');
+  ok(S.gate('hard') === false && !$('m-store').hidden && S.ui().feature === 'hard' && $('st-title').textContent === 'Professional and International', 'pressing Hard opens the Unlock card');
   S.close();
-  ok(/if \(key === 'diff' && i === 3 && !storeGate\('hard'/.test(menus) && /if \(i === 2 && !storeGate\('hard'/.test(menus), 'the home\'s Hard and each Two Player Hard go through the gate first');
+  ok(/if \(key === 'diff' && i >= 3 && !storeGate\('hard'/.test(menus) && /if \(i === 2 && !storeGate\('hard'/.test(menus), 'the home\'s Hard and each Two Player Hard go through the gate first');
   // Get the App: once the links are in, through the grown-up check, the store for the device
   S.LINKS.ios = 'https://apps.apple.com/app/id1';
   S.open({ mode:'unlock', feature:'champ' });
@@ -533,7 +533,7 @@ const SHARE_WORDS = '% of what we receive for every Super Fan unlock goes to the
   ok(!K.gate() && !$('m-store').hidden, 'over it, the grown-up check takes Escape first: the check shuts, the card stays');
   S.close();
   const block = html.slice(html.indexOf('<div class="modal" id="m-store"'), html.indexOf('<div class="modal" id="m-gate"'));
-  ok((block.match(/<button class="btn"/g) || []).length === 6 && /id="st-reset" hidden>Reset Kids Level</.test(block) && /id="st-easy" hidden>Move Up to Easy</.test(block) && !/<a[\s>]|href=/.test(block), 'Privacy, Support, Reset Kids Level, Move Up to Easy, Restore Purchases and Back are buttons, never links');
+  ok((block.match(/<button class="btn"/g) || []).length === 6 && /id="st-reset" hidden>Reset Minis Level</.test(block) && /id="st-easy" hidden>Move Up to Juniors</.test(block) && !/<a[\s>]|href=/.test(block), 'Privacy, Support, Reset Minis Level, Move Up to Juniors, Restore Purchases and Back are buttons, never links');
   ok(/aria-modal="true"/.test(block) && /role="status"/.test(block), 'a dialog, and its message is read out');
   const z = sel => { let v = null; for (const m of css.matchAll(new RegExp('(?:^|[},\\s])' + sel.replace(/[.#]/g, '\\$&') + '\\{[^}]*z-index:(\\d+)', 'g'))) v = +m[1]; return v; };
   ok(z('.modal') < z('#m-gate'), 'the grown-up check sits over the card');

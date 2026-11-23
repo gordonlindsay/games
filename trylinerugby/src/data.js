@@ -314,6 +314,7 @@ const DIFF = [
   { scrumCpu:0.74, lineSigma:0.10, lineContest:0.72, cpuSpeed:1.00, cpuTackle:0.64, myTackle:0.48, cpuIntercept:0.17, turnover:0.00 },
   { scrumCpu:0.83, lineSigma:0.06, lineContest:0.80, cpuSpeed:1.04, cpuTackle:0.72, myTackle:0.42, cpuIntercept:0.25, turnover:0.03 },
 ];
+const INTERNATIONAL_DIFF = { ...DIFF[2], scrumCpu:0.88, lineSigma:0.045, lineContest:0.88, cpuSpeed:1.06, cpuTackle:0.76, cpuIntercept:0.29 };
 /* The first EARLY.games one-player matches on Normal only. A player who has not learned to turn and chase leaves one
    defender running the wrong way, so two levers move and nothing else: the other side runs at Easy's pace, and your
    teammates tackle a little more surely than on Easy (one of them is still being pulled out of the tackle). Easy and

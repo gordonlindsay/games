@@ -99,9 +99,9 @@ function kidsAdapt() {                                     // full time in a Kid
 const KIDS_EASY = { top:0.95, margin:3, run:5 };
 const kidsReady = () => kidsLevel() && (settings.kidsTop | 0) >= KIDS_EASY.run;
 const kidsLevel = () => !!settings.kids && settings.diff === 0;
-/* The home Difficulty row is Kids | Easy | Normal | Hard: button 0 is the flag, buttons 1-3 are diff 0-2. */
-const kidsSegIndex = () => (kidsLevel() ? 0 : settings.diff + 1);
-function kidsSegSet(i) { settings.kids = i === 0; settings.diff = clamp(i - 1, 0, 2); }
+/* The fifth setting uses the Hard timing tables with a stronger CPU. */
+const kidsSegIndex = () => (kidsLevel() ? 0 : settings.diff === 2 && settings.international ? 4 : settings.diff + 1);
+function kidsSegSet(i) { settings.kids = i === 0; settings.international = i === 4; settings.diff = clamp(i - 1, 0, 2); }
 
 /* ---------- the levers the engine calls (each caller checks M.kids first) ---------- */
 function kidsDuel(c, res, act) {                           // a close-up you get wrong (early, late or the wrong way) still comes off KIDS.save of the time, a Perfect if the press was in the gold
